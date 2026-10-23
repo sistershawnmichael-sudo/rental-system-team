@@ -44,6 +44,7 @@ function Navbar() {
         <NavLink to="/customers">Customers</NavLink>
         <NavLink to="/about">About Us</NavLink>
         <NavLink to="/contact">Contact</NavLink>
+        <NavLink to="/rentals">Rentals</NavLink>
       </nav>
 
       <Link to="/vehicles" className="nav-button">
@@ -575,8 +576,15 @@ function Customers() {
                 onClick={() => editCustomer(customer)} disabled={loading}>
                 Edit
               </button>
-              <button className="button delete-button"
-                onClick={() => deleteCustomer(customer)} disabled={loading}>
+              <button
+                type="button"
+                className="button delete-button"
+                onClick={() => {
+                  console.log("Delete clicked:", customer);
+                  deleteCustomer(customer);
+                }}
+                disabled={loading}
+              >
                 Delete
               </button>
             </div>
@@ -586,6 +594,227 @@ function Customers() {
 
       {filteredCustomers.length === 0 &&
         <p className="empty-message">No customers found.</p>}
+    </main>
+  );
+}
+
+ // RENTALS / BOOKINGS PAGE
+function Rentals() {
+  const [customers, setCustomers] = useState([]);
+  const [vehicles, setVehicles] = useState([]);
+  const [bookings, setBookings] = useState([]);
+
+  const [form, setForm] = useState({
+    customerId: "",
+    vehicleId: "",
+    startDate: "",
+    endDate: "",
+  });
+
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function loadData() {
+    try {
+      const [customerData, vehicleData, bookingData] =
+        await Promise.all([
+          request(CUSTOMER_API),
+          request(API_URL),
+          request("http://localhost:5000/api/bookings"),
+        ]);
+
+      setCustomers(customerData);
+      setVehicles(vehicleData);
+      setBookings(bookingData);
+    } catch (error) {
+      setMessage(error.message);
+    }
+  }
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const selectedVehicle = vehicles.find(
+    (vehicle) => String(vehicle.id) === form.vehicleId
+  );
+
+  const days =
+    form.startDate && form.endDate &&
+    form.endDate >= form.startDate
+      ? Math.floor(
+          (new Date(form.endDate + "T00:00:00Z") -
+            new Date(form.startDate + "T00:00:00Z")) /
+            86400000
+        ) + 1
+      : 0;
+
+  const total =
+    days > 0 && selectedVehicle
+      ? days * Number(
+          selectedVehicle.pricePerDay ??
+          selectedVehicle.price_per_day ??
+          0
+        )
+      : 0;
+
+  async function createBooking(event) {
+    event.preventDefault();
+    setLoading(true);
+    setMessage("");
+
+    try {
+      await request("http://localhost:5000/api/bookings", {
+        method: "POST",
+        body: JSON.stringify({
+          customerId: Number(form.customerId),
+          vehicleId: Number(form.vehicleId),
+          startDate: form.startDate,
+          endDate: form.endDate,
+        }),
+      });
+
+      setMessage("Booking created successfully!");
+      setForm({
+        customerId: "",
+        vehicleId: "",
+        startDate: "",
+        endDate: "",
+      });
+
+      await loadData();
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <main className="section">
+      <p className="eyebrow">DRIVEEASY MANAGEMENT</p>
+      <h1>Rentals & Bookings</h1>
+      <p>Create a rental booking and view your booking records.</p>
+
+      <form className="form-card" onSubmit={createBooking}>
+        <h2>Create a Booking</h2>
+
+        <label>Customer</label>
+        <select
+          value={form.customerId}
+          onChange={(e) =>
+            setForm({ ...form, customerId: e.target.value })
+          }
+          required
+        >
+          <option value="">Select a customer</option>
+          {customers.map((customer) => (
+            <option key={customer.id} value={customer.id}>
+              {customer.fullName ?? customer.full_name}
+            </option>
+          ))}
+        </select>
+
+        <label>Vehicle</label>
+        <select
+          value={form.vehicleId}
+          onChange={(e) =>
+            setForm({ ...form, vehicleId: e.target.value })
+          }
+          required
+        >
+          <option value="">Select a vehicle</option>
+          {vehicles.map((vehicle) => (
+            <option key={vehicle.id} value={vehicle.id}>
+              {vehicle.brand} {vehicle.model} — {vehicle.plateNumber ?? vehicle.plate_number}
+            </option>
+          ))}
+        </select>
+
+        <label>Rental Start Date</label>
+        <input
+          type="date"
+          value={form.startDate}
+          onChange={(e) =>
+            setForm({ ...form, startDate: e.target.value })
+          }
+          required
+        />
+
+        <label>Rental End Date</label>
+        <input
+          type="date"
+          min={form.startDate || undefined}
+          value={form.endDate}
+          onChange={(e) =>
+            setForm({ ...form, endDate: e.target.value })
+          }
+          required
+        />
+
+        <p>
+          Rental Days: <strong>{days}</strong>
+        </p>
+        <p>
+          Estimated Total:{" "}
+          <strong>₱{total.toLocaleString("en-PH", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}</strong>
+        </p>
+
+        <button type="submit" disabled={loading}>
+          {loading ? "Creating..." : "Create Booking"}
+        </button>
+
+        {message && <p role="status">{message}</p>}
+      </form>
+
+      <div className="table-container">
+        <h2>Booking Records</h2>
+        <button type="button" onClick={loadData}>
+          Refresh Bookings
+        </button>
+
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Customer</th>
+              <th>Vehicle</th>
+              <th>Start Date</th>
+              <th>End Date</th>
+              <th>Total</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {bookings.map((booking) => (
+              <tr key={booking.id}>
+                <td>{booking.id}</td>
+                <td>{booking.customerName}</td>
+                <td>
+                  {booking.brand} {booking.model}
+                </td>
+                <td>{String(booking.startDate).slice(0, 10)}</td>
+                <td>{String(booking.endDate).slice(0, 10)}</td>
+                <td>
+                  ₱{Number(booking.totalPrice).toLocaleString("en-PH", {
+                    minimumFractionDigits: 2,
+                  })}
+                </td>
+                <td>{booking.status}</td>
+              </tr>
+            ))}
+
+            {bookings.length === 0 && (
+              <tr>
+                <td colSpan="7">No bookings found.</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </main>
   );
 }
@@ -676,6 +905,7 @@ export default function App() {
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="*" element={<NotFound />} />
+        <Route path="/rentals" element={<Rentals />} />
       </Routes>
       <Footer />
     </BrowserRouter>
