@@ -12,11 +12,93 @@ import "./App.css";
 const API_URL = "http://localhost:5000/api/vehicles";
 const CUSTOMER_API = "http://localhost:5000/api/customers";
 
+const AUTH_API = "http://localhost:5000/api/auth";
+
+function Login() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function handleLogin(event) {
+    event.preventDefault();
+    setLoading(true);
+    setMessage("");
+
+    try {
+      const data = await request(`${AUTH_API}/login`, {
+        method: "POST",
+        body: JSON.stringify({ email, password }),
+      });
+
+      sessionStorage.setItem("driveEasyToken", data.token);
+      sessionStorage.setItem("driveEasyUser", JSON.stringify(data.user));
+
+      window.location.href = "/";
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <main className="section simple-page">
+      <div className="management-panel">
+        <p className="eyebrow">WELCOME BACK</p>
+        <h1>DriveEasy Login</h1>
+        <p>Sign in to access your account.</p>
+
+        <form className="vehicle-form" onSubmit={handleLogin}>
+          <label htmlFor="login-email">Email</label>
+          <input
+            id="login-email"
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            placeholder="Enter your email"
+            autoComplete="username"
+            required
+          />
+
+          <label htmlFor="login-password">Password</label>
+          <input
+            id="login-password"
+            type="password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            placeholder="Enter your password"
+            autoComplete="current-password"
+            required
+          />
+
+          <button
+            className="button primary-button"
+            type="submit"
+            disabled={loading}
+          >
+            {loading ? "Signing in..." : "Login"}
+          </button>
+        </form>
+
+        {message && (
+          <p className="message" role="alert">{message}</p>
+        )}
+      </div>
+    </main>
+  );
+}
+
+
+
 async function request(url, options = {}) {
+  const token = sessionStorage.getItem("driveEasyToken");
+
   const response = await fetch(url, {
     ...options,
     headers: {
       "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options.headers,
     },
   });
@@ -29,6 +111,7 @@ async function request(url, options = {}) {
 
   return data;
 }
+
 
 // NAVIGATION
 function Navbar() {
@@ -45,13 +128,21 @@ function Navbar() {
         <NavLink to="/about">About Us</NavLink>
         <NavLink to="/contact">Contact</NavLink>
         <NavLink to="/rentals">Rentals</NavLink>
+      
       </nav>
 
-      <Link to="/vehicles" className="nav-button">
-        Explore Cars
-      </Link>
+      <div className="nav-actions">
+        <NavLink to="/login" className="login-link">
+          Login
+        </NavLink>
+
+        <Link to="/vehicles" className="nav-button">
+          Explore Cars
+        </Link>
+      </div>
     </header>
   );
+
 }
 
 // HOME PAGE
@@ -599,20 +690,25 @@ function Customers() {
 }
 
  // RENTALS / BOOKINGS PAGE
-function Rentals() {
-  const [customers, setCustomers] = useState([]);
-  const [vehicles, setVehicles] = useState([]);
-  const [bookings, setBookings] = useState([]);
 
-  const [form, setForm] = useState({
+function Rentals() {
+  const BOOKINGS_API = "http://localhost:5000/api/bookings";
+  const emptyForm = {
     customerId: "",
     vehicleId: "",
     startDate: "",
     endDate: "",
-  });
+  };
 
+  const [customers, setCustomers] = useState([]);
+  const [vehicles, setVehicles] = useState([]);
+  const [bookings, setBookings] = useState([]);
+  const [form, setForm] = useState(emptyForm);
+  const [editingId, setEditingId] = useState(null);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All");
 
   async function loadData() {
     try {
@@ -620,7 +716,7 @@ function Rentals() {
         await Promise.all([
           request(CUSTOMER_API),
           request(API_URL),
-          request("http://localhost:5000/api/bookings"),
+          request(BOOKINGS_API),
         ]);
 
       setCustomers(customerData);
@@ -640,7 +736,8 @@ function Rentals() {
   );
 
   const days =
-    form.startDate && form.endDate &&
+    form.startDate &&
+    form.endDate &&
     form.endDate >= form.startDate
       ? Math.floor(
           (new Date(form.endDate + "T00:00:00Z") -
@@ -651,36 +748,66 @@ function Rentals() {
 
   const total =
     days > 0 && selectedVehicle
-      ? days * Number(
+      ? days *
+        Number(
           selectedVehicle.pricePerDay ??
           selectedVehicle.price_per_day ??
           0
         )
       : 0;
 
-  async function createBooking(event) {
+  function resetForm() {
+    setForm(emptyForm);
+    setEditingId(null);
+  }
+
+  function editBooking(booking) {
+    if (!["Pending", "Approved"].includes(booking.status)) {
+      setMessage("Only pending or approved bookings can be edited.");
+      return;
+    }
+
+    setEditingId(booking.id);
+    setForm({
+      customerId: String(booking.customerId),
+      vehicleId: String(booking.vehicleId),
+      startDate: String(booking.startDate).slice(0, 10),
+      endDate: String(booking.endDate).slice(0, 10),
+    });
+    setMessage("Editing booking #" + booking.id);
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  async function handleSubmit(event) {
     event.preventDefault();
     setLoading(true);
     setMessage("");
 
     try {
-      await request("http://localhost:5000/api/bookings", {
-        method: "POST",
-        body: JSON.stringify({
-          customerId: Number(form.customerId),
-          vehicleId: Number(form.vehicleId),
-          startDate: form.startDate,
-          endDate: form.endDate,
-        }),
-      });
+      const isEditing = editingId !== null;
 
-      setMessage("Booking created successfully!");
-      setForm({
-        customerId: "",
-        vehicleId: "",
-        startDate: "",
-        endDate: "",
-      });
+      await request(
+        isEditing
+          ? `${BOOKINGS_API}/${editingId}`
+          : BOOKINGS_API,
+        {
+          method: isEditing ? "PUT" : "POST",
+          body: JSON.stringify({
+            customerId: Number(form.customerId),
+            vehicleId: Number(form.vehicleId),
+            startDate: form.startDate,
+            endDate: form.endDate,
+          }),
+        }
+      );
+
+      resetForm();
+      setMessage(
+        isEditing
+          ? "Booking updated successfully."
+          : "Booking created successfully."
+      );
 
       await loadData();
     } catch (error) {
@@ -690,92 +817,219 @@ function Rentals() {
     }
   }
 
+  async function updateStatus(booking, status) {
+    const action =
+      status === "Cancelled"
+        ? "cancel this booking"
+        : `change this booking to ${status}`;
+
+    if (!window.confirm(`Are you sure you want to ${action}?`)) {
+      return;
+    }
+
+    setLoading(true);
+    setMessage("");
+
+    try {
+      await request(`${BOOKINGS_API}/${booking.id}/status`, {
+        method: "PATCH",
+        body: JSON.stringify({ status }),
+      });
+
+      setMessage(
+        status === "Cancelled"
+          ? "Booking cancelled successfully."
+          : `Booking status changed to ${status}.`
+      );
+
+      await loadData();
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const filteredBookings = bookings.filter((booking) => {
+    const searchText = [
+      booking.id,
+      booking.customerName,
+      booking.brand,
+      booking.model,
+      booking.plateNumber,
+    ]
+      .join(" ")
+      .toLowerCase();
+
+    const matchesSearch = searchText.includes(search.toLowerCase());
+    const matchesStatus =
+      statusFilter === "All" || booking.status === statusFilter;
+
+    return matchesSearch && matchesStatus;
+  });
+
   return (
-    <main className="section">
-      <p className="eyebrow">DRIVEEASY MANAGEMENT</p>
-      <h1>Rentals & Bookings</h1>
-      <p>Create a rental booking and view your booking records.</p>
+    <main className="page section">
+      <div className="page-heading">
+        <p className="eyebrow">DRIVEEASY MANAGEMENT</p>
+        <h1>Rentals & Bookings</h1>
+        <p>Create, edit, and manage your vehicle rental bookings.</p>
+      </div>
 
-      <form className="form-card" onSubmit={createBooking}>
-        <h2>Create a Booking</h2>
+      <section className="management-panel">
+        <h2>
+          {editingId !== null
+            ? `Edit Booking #${editingId}`
+            : "Create a Booking"}
+        </h2>
 
-        <label>Customer</label>
-        <select
-          value={form.customerId}
-          onChange={(e) =>
-            setForm({ ...form, customerId: e.target.value })
-          }
-          required
+        <form className="vehicle-form" onSubmit={handleSubmit}>
+          <label htmlFor="bookingCustomer">Customer</label>
+          <select
+            id="bookingCustomer"
+            value={form.customerId}
+            onChange={(e) =>
+              setForm({ ...form, customerId: e.target.value })
+            }
+            required
+          >
+            <option value="">Select a customer</option>
+            {customers.map((customer) => (
+              <option key={customer.id} value={customer.id}>
+                {customer.fullName ?? customer.full_name}
+              </option>
+            ))}
+          </select>
+
+          <label htmlFor="bookingVehicle">Vehicle</label>
+          <select
+            id="bookingVehicle"
+            value={form.vehicleId}
+            onChange={(e) =>
+              setForm({ ...form, vehicleId: e.target.value })
+            }
+            required
+          >
+            <option value="">Select a vehicle</option>
+            {vehicles.map((vehicle) => (
+              <option key={vehicle.id} value={vehicle.id}>
+                {vehicle.brand} {vehicle.model} —{" "}
+                {vehicle.plateNumber ?? vehicle.plate_number}
+              </option>
+            ))}
+          </select>
+
+          <label htmlFor="bookingStart">Rental Start Date</label>
+          <input
+            id="bookingStart"
+            type="date"
+            value={form.startDate}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                startDate: e.target.value,
+                endDate:
+                  form.endDate && form.endDate < e.target.value
+                    ? ""
+                    : form.endDate,
+              })
+            }
+            required
+          />
+
+          <label htmlFor="bookingEnd">Rental End Date</label>
+          <input
+            id="bookingEnd"
+            type="date"
+            min={form.startDate || undefined}
+            value={form.endDate}
+            onChange={(e) =>
+              setForm({ ...form, endDate: e.target.value })
+            }
+            required
+          />
+
+          <p>
+            Rental Days: <strong>{days}</strong>
+          </p>
+          <p>
+            Estimated Total:{" "}
+            <strong>
+              ₱
+              {total.toLocaleString("en-PH", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
+            </strong>
+          </p>
+
+          <div className="form-actions">
+            <button
+              type="submit"
+              className="button primary-button"
+              disabled={loading}
+            >
+              {loading
+                ? "Please wait..."
+                : editingId !== null
+                  ? "Save Changes"
+                  : "Create Booking"}
+            </button>
+
+            {editingId !== null && (
+              <button
+                type="button"
+                className="button secondary-button"
+                onClick={resetForm}
+                disabled={loading}
+              >
+                Stop Editing
+              </button>
+            )}
+          </div>
+        </form>
+      </section>
+
+      <div className="list-heading">
+        <div>
+          <h2>Booking Records</h2>
+          <p>Manage booking details and track rental progress.</p>
+        </div>
+
+        <button
+          type="button"
+          className="button secondary-button"
+          onClick={loadData}
+          disabled={loading}
         >
-          <option value="">Select a customer</option>
-          {customers.map((customer) => (
-            <option key={customer.id} value={customer.id}>
-              {customer.fullName ?? customer.full_name}
-            </option>
-          ))}
-        </select>
-
-        <label>Vehicle</label>
-        <select
-          value={form.vehicleId}
-          onChange={(e) =>
-            setForm({ ...form, vehicleId: e.target.value })
-          }
-          required
-        >
-          <option value="">Select a vehicle</option>
-          {vehicles.map((vehicle) => (
-            <option key={vehicle.id} value={vehicle.id}>
-              {vehicle.brand} {vehicle.model} — {vehicle.plateNumber ?? vehicle.plate_number}
-            </option>
-          ))}
-        </select>
-
-        <label>Rental Start Date</label>
-        <input
-          type="date"
-          value={form.startDate}
-          onChange={(e) =>
-            setForm({ ...form, startDate: e.target.value })
-          }
-          required
-        />
-
-        <label>Rental End Date</label>
-        <input
-          type="date"
-          min={form.startDate || undefined}
-          value={form.endDate}
-          onChange={(e) =>
-            setForm({ ...form, endDate: e.target.value })
-          }
-          required
-        />
-
-        <p>
-          Rental Days: <strong>{days}</strong>
-        </p>
-        <p>
-          Estimated Total:{" "}
-          <strong>₱{total.toLocaleString("en-PH", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })}</strong>
-        </p>
-
-        <button type="submit" disabled={loading}>
-          {loading ? "Creating..." : "Create Booking"}
+          ↻ Refresh Bookings
         </button>
+      </div>
 
-        {message && <p role="status">{message}</p>}
-      </form>
+      <div className="search-form">
+        <input
+          type="search"
+          placeholder="Search ID, customer, or vehicle"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+
+        <select
+          aria-label="Filter by booking status"
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+        >
+          <option value="All">All Statuses</option>
+          <option value="Pending">Pending</option>
+          <option value="Confirmed">Confirmed</option>
+          <option value="Completed">Completed</option>
+          <option value="Cancelled">Cancelled</option>
+        </select>
+      </div>
+
+      <p className="message" role="status">{message}</p>
 
       <div className="table-container">
-        <h2>Booking Records</h2>
-        <button type="button" onClick={loadData}>
-          Refresh Bookings
-        </button>
-
         <table>
           <thead>
             <tr>
@@ -786,30 +1040,97 @@ function Rentals() {
               <th>End Date</th>
               <th>Total</th>
               <th>Status</th>
+              <th>Actions</th>
             </tr>
           </thead>
+
           <tbody>
-            {bookings.map((booking) => (
+            {filteredBookings.map((booking) => (
               <tr key={booking.id}>
-                <td>{booking.id}</td>
+                <td>#{booking.id}</td>
                 <td>{booking.customerName}</td>
                 <td>
                   {booking.brand} {booking.model}
+                  <br />
+                  <small>{booking.plateNumber}</small>
                 </td>
                 <td>{String(booking.startDate).slice(0, 10)}</td>
                 <td>{String(booking.endDate).slice(0, 10)}</td>
                 <td>
-                  ₱{Number(booking.totalPrice).toLocaleString("en-PH", {
+                  ₱
+                  {Number(booking.totalPrice).toLocaleString("en-PH", {
                     minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
                   })}
                 </td>
-                <td>{booking.status}</td>
+                <td>
+                  <span className="badge">
+                    {booking.status}
+                  </span>
+                </td>
+                <td>
+                  <div className="card-actions booking-actions">
+                    {["Pending", "Confirmed"].includes(booking.status) && (
+                      <>
+                        <button
+                          type="button"
+                          className="button secondary-button"
+                          onClick={() => editBooking(booking)}
+                          disabled={loading}
+                        >
+                          Edit
+                        </button>
+
+                        {booking.status === "Pending" && (
+                          <button
+                            type="button"
+                            className="button primary-button"
+                            onClick={() =>
+                              updateStatus(booking, "Confirmed")
+                            }
+                            disabled={loading}
+                          >
+                            Confirm
+                          </button>
+                        )}
+
+                        {booking.status === "Confirmed" && (
+                          <button
+                            type="button"
+                            className="button primary-button"
+                            onClick={() =>
+                              updateStatus(booking, "Completed")
+                            }
+                            disabled={loading}
+                          >
+                            Complete
+                          </button>
+                        )}
+
+                        <button
+                          type="button"
+                          className="button delete-button"
+                          onClick={() =>
+                            updateStatus(booking, "Cancelled")
+                          }
+                          disabled={loading}
+                        >
+                          Cancel Booking
+                        </button>
+                      </>
+                    )}
+
+                    {["Completed", "Cancelled"].includes(booking.status) && (
+                      <span>Closed</span>
+                    )}
+                  </div>
+                </td>
               </tr>
             ))}
 
-            {bookings.length === 0 && (
+            {filteredBookings.length === 0 && (
               <tr>
-                <td colSpan="7">No bookings found.</td>
+                <td colSpan="8">No matching bookings found.</td>
               </tr>
             )}
           </tbody>
@@ -906,6 +1227,7 @@ export default function App() {
         <Route path="/contact" element={<Contact />} />
         <Route path="*" element={<NotFound />} />
         <Route path="/rentals" element={<Rentals />} />
+        <Route path="/login" element={<Login />} />
       </Routes>
       <Footer />
     </BrowserRouter>
