@@ -34,7 +34,7 @@ function Login() {
       sessionStorage.setItem("driveEasyToken", data.token);
       sessionStorage.setItem("driveEasyUser", JSON.stringify(data.user));
 
-      window.location.href = "/";
+    window.location.href = "/rentals";
     } catch (error) {
       setMessage(error.message);
     } finally {
@@ -128,7 +128,7 @@ function Navbar() {
         <NavLink to="/customers">Customers</NavLink>
         <NavLink to="/about">About Us</NavLink>
         <NavLink to="/contact">Contact</NavLink>
-        <NavLink to="/rentals">Rentals</NavLink>
+       
       
       </nav>
 
@@ -203,6 +203,12 @@ function Home() {
 
 // VEHICLES PAGE
 function Vehicles() {
+  const user = JSON.parse(
+    sessionStorage.getItem("driveEasyUser") || "null"
+  );
+  console.log("Logged-in user:", user);
+  const isAdmin = user?.role === "Admin";
+
   const emptyForm = {
     brand: "",
     model: "",
@@ -248,6 +254,8 @@ function Vehicles() {
   }
 
   function editVehicle(vehicle) {
+    if (!isAdmin) return;
+
     setEditingId(vehicle.id);
     setForm({
       brand: vehicle.brand,
@@ -256,11 +264,17 @@ function Vehicles() {
       pricePerDay: String(vehicle.pricePerDay),
       status: vehicle.status,
     });
+
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   async function handleSubmit(event) {
     event.preventDefault();
+
+    if (!isAdmin) {
+      setMessage("Only Admin can manage vehicles.");
+      return;
+    }
 
     if (
       !form.brand.trim() ||
@@ -294,6 +308,7 @@ function Vehicles() {
       resetForm();
       const data = await request(API_URL);
       setVehicles(data);
+
       setMessage(
         wasEditing
           ? "Vehicle updated successfully."
@@ -307,15 +322,22 @@ function Vehicles() {
   }
 
   async function deleteVehicle(vehicle) {
+    if (!isAdmin) {
+      setMessage("Only Admin can manage vehicles.");
+      return;
+    }
+
     if (!window.confirm(`Delete ${vehicle.brand} ${vehicle.model}?`)) {
       return;
     }
 
     setLoading(true);
+
     try {
       await request(`${API_URL}/${vehicle.id}`, {
         method: "DELETE",
       });
+
       if (editingId === vehicle.id) resetForm();
 
       const data = await request(API_URL);
@@ -337,10 +359,12 @@ function Vehicles() {
     }
 
     setLoading(true);
+
     try {
       const vehicle = await request(
         `${API_URL}/${encodeURIComponent(searchId.trim())}`
       );
+
       setVehicles([vehicle]);
       setMessage("Vehicle found.");
     } catch (error) {
@@ -359,71 +383,141 @@ function Vehicles() {
         <p>Explore our vehicles and compare daily rental rates.</p>
       </div>
 
-      <section className="management-panel">
-        <h2>{editingId !== null ? "Update Vehicle" : "Add New Vehicle"}</h2>
-        <p>Enter the vehicle details below.</p>
+      {/* ADMIN-ONLY VEHICLE MANAGEMENT */}
+      {isAdmin && (
+        <section className="management-panel">
+          <h2>
+            {editingId !== null ? "Update Vehicle" : "Add New Vehicle"}
+          </h2>
+          <p>Enter the vehicle details below.</p>
 
-        <form className="vehicle-form" onSubmit={handleSubmit}>
-          <label htmlFor="brand">Brand</label>
-          <input id="brand" name="brand" value={form.brand}
-            onChange={handleChange} placeholder="e.g. Toyota" required />
+          <form className="vehicle-form" onSubmit={handleSubmit}>
+            <label htmlFor="brand">Brand</label>
+            <input
+              id="brand"
+              name="brand"
+              value={form.brand}
+              onChange={handleChange}
+              placeholder="e.g. Toyota"
+              required
+            />
 
-          <label htmlFor="model">Model</label>
-          <input id="model" name="model" value={form.model}
-            onChange={handleChange} placeholder="e.g. Vios" required />
+            <label htmlFor="model">Model</label>
+            <input
+              id="model"
+              name="model"
+              value={form.model}
+              onChange={handleChange}
+              placeholder="e.g. Vios"
+              required
+            />
 
-          <label htmlFor="plateNumber">Plate Number</label>
-          <input id="plateNumber" name="plateNumber"
-            value={form.plateNumber} onChange={handleChange}
-            placeholder="e.g. ABC-1234" required />
+            <label htmlFor="plateNumber">Plate Number</label>
+            <input
+              id="plateNumber"
+              name="plateNumber"
+              value={form.plateNumber}
+              onChange={handleChange}
+              placeholder="e.g. ABC-1234"
+              required
+            />
 
-          <label htmlFor="pricePerDay">Price Per Day (₱)</label>
-          <input id="pricePerDay" name="pricePerDay" type="number"
-            min="0" step="0.01" value={form.pricePerDay}
-            onChange={handleChange} placeholder="1500" required />
+            <label htmlFor="pricePerDay">Price Per Day (₱)</label>
+            <input
+              id="pricePerDay"
+              name="pricePerDay"
+              type="number"
+              min="0"
+              step="0.01"
+              value={form.pricePerDay}
+              onChange={handleChange}
+              placeholder="1500"
+              required
+            />
 
-          <label htmlFor="status">Availability</label>
-          <select id="status" name="status" value={form.status}
-            onChange={handleChange}>
-            <option value="Available">Available</option>
-            <option value="Rented">Rented</option>
-          </select>
+            <label htmlFor="status">Availability</label>
+            <select
+              id="status"
+              name="status"
+              value={form.status}
+              onChange={handleChange}
+            >
+              <option value="Available">Available</option>
+              <option value="Rented">Rented</option>
+            </select>
 
-          <div className="form-actions">
-            <button className="button primary-button" disabled={loading}>
-              {loading ? "Please wait..." :
-                editingId !== null ? "Save Changes" : "Add Vehicle"}
-            </button>
-            {editingId !== null && (
-              <button type="button" className="button secondary-button"
-                onClick={resetForm}>Cancel</button>
-            )}
-          </div>
-        </form>
-      </section>
+            <div className="form-actions">
+              <button
+                type="submit"
+                className="button primary-button"
+                disabled={loading}
+              >
+                {loading
+                  ? "Please wait..."
+                  : editingId !== null
+                    ? "Save Changes"
+                    : "Add Vehicle"}
+              </button>
 
+              {editingId !== null && (
+                <button
+                  type="button"
+                  className="button secondary-button"
+                  onClick={resetForm}
+                >
+                  Cancel
+                </button>
+              )}
+            </div>
+          </form>
+        </section>
+      )}
+
+      {/* PUBLIC VEHICLE BROWSING */}
       <div className="list-heading">
         <div>
           <h2>Our Vehicles</h2>
           <p>Check vehicle details and availability.</p>
         </div>
-        <button className="button secondary-button"
-          onClick={loadVehicles} disabled={loading}>↻ Refresh</button>
+
+        <button
+          type="button"
+          className="button secondary-button"
+          onClick={loadVehicles}
+          disabled={loading}
+        >
+          ↻ Refresh
+        </button>
       </div>
 
       <form className="search-form" onSubmit={searchVehicle}>
-        <input type="number" min="1" placeholder="Search by vehicle ID"
+        <input
+          type="number"
+          min="1"
+          placeholder="Search by vehicle ID"
           value={searchId}
-          onChange={(event) => setSearchId(event.target.value)} />
-        <button className="button primary-button">Search</button>
-        <button type="button" className="button secondary-button"
+          onChange={(event) => setSearchId(event.target.value)}
+        />
+
+        <button type="submit" className="button primary-button">
+          Search
+        </button>
+
+        <button
+          type="button"
+          className="button secondary-button"
           onClick={() => {
             setSearchId("");
             loadVehicles();
-          }}>Show All</button>
+          }}
+        >
+          Show All
+        </button>
       </form>
 
-      <p className="message" role="status">{message}</p>
+      <p className="message" role="status">
+        {message}
+      </p>
 
       <div className="vehicle-grid">
         {vehicles.map((vehicle) => (
@@ -432,38 +526,62 @@ function Vehicles() {
               <span>🚘</span>
               <small>ID #{vehicle.id}</small>
             </div>
+
             <div className="vehicle-info">
               <div className="vehicle-title">
                 <div>
-                  <h3>{vehicle.brand} {vehicle.model}</h3>
+                  <h3>
+                    {vehicle.brand} {vehicle.model}
+                  </h3>
                   <p>Plate: {vehicle.plateNumber}</p>
                 </div>
-                <span className={vehicle.status === "Available"
-                  ? "badge available" : "badge rented"}>
+
+                <span
+                  className={
+                    vehicle.status === "Available"
+                      ? "badge available"
+                      : "badge rented"
+                  }
+                >
                   {vehicle.status}
                 </span>
               </div>
+
               <p className="price">
                 ₱{Number(vehicle.pricePerDay).toLocaleString("en-PH")}
                 <small> / day</small>
               </p>
-              <div className="card-actions">
-                <button className="button secondary-button"
-                  onClick={() => editVehicle(vehicle)} disabled={loading}>
-                  Edit
-                </button>
-                <button className="button delete-button"
-                  onClick={() => deleteVehicle(vehicle)} disabled={loading}>
-                  Delete
-                </button>
-              </div>
+
+              {/* ADMIN-ONLY EDIT AND DELETE */}
+              {isAdmin && (
+                <div className="card-actions">
+                  <button
+                    type="button"
+                    className="button secondary-button"
+                    onClick={() => editVehicle(vehicle)}
+                    disabled={loading}
+                  >
+                    Edit
+                  </button>
+
+                  <button
+                    type="button"
+                    className="button delete-button"
+                    onClick={() => deleteVehicle(vehicle)}
+                    disabled={loading}
+                  >
+                    Delete
+                  </button>
+                </div>
+              )}
             </div>
           </article>
         ))}
       </div>
 
-      {vehicles.length === 0 &&
-        <p className="empty-message">No vehicles to display.</p>}
+      {vehicles.length === 0 && (
+        <p className="empty-message">No vehicles to display.</p>
+      )}
     </main>
   );
 }
