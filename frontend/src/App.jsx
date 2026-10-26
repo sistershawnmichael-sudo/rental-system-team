@@ -102,6 +102,7 @@ async function request(url, options = {}) {
       ...options.headers,
     },
   });
+  console.log("Request token exists:", Boolean(token));
 
   const data = await response.json();
 
