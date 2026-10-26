@@ -34,7 +34,11 @@ function Login() {
       sessionStorage.setItem("driveEasyToken", data.token);
       sessionStorage.setItem("driveEasyUser", JSON.stringify(data.user));
 
-    window.location.href = "/rentals";
+   if (data.user.role === "Admin") {
+  window.location.href = "/admin";
+} else {
+  window.location.href = "/";
+}
     } catch (error) {
       setMessage(error.message);
     } finally {
@@ -115,36 +119,71 @@ async function request(url, options = {}) {
 
 
 // NAVIGATION
+
 function Navbar() {
+  const user = JSON.parse(
+    sessionStorage.getItem("driveEasyUser") || "null"
+  );
+
+  const isAdmin = user?.role === "Admin";
+
+  function handleLogout() {
+    sessionStorage.removeItem("driveEasyToken");
+    sessionStorage.removeItem("driveEasyUser");
+    window.location.href = "/";
+  }
+
   return (
     <header className="navbar">
-      <Link to="/" className="logo">
+      <Link to={isAdmin ? "/admin" : "/"} className="logo">
         DriveEasy<span>.</span>
       </Link>
 
       <nav>
-        <NavLink to="/" end>Home</NavLink>
-        <NavLink to="/vehicles">Vehicles</NavLink>
-        <NavLink to="/customers">Customers</NavLink>
-        <NavLink to="/about">About Us</NavLink>
-        <NavLink to="/contact">Contact</NavLink>
-       
-      
+        {isAdmin ? (
+          <>
+            <NavLink to="/admin">Dashboard</NavLink>
+            <NavLink to="/vehicles">Vehicles</NavLink>
+            <NavLink to="/customers">Customers</NavLink>
+            <NavLink to="/rentals">Rentals</NavLink>
+          </>
+        ) : (
+          <>
+            <NavLink to="/" end>Home</NavLink>
+            <NavLink to="/vehicles">Vehicles</NavLink>
+            <NavLink to="/book">Book a Vehicle</NavLink>
+            <NavLink to="/about">About Us</NavLink>
+            <NavLink to="/contact">Contact</NavLink>
+          </>
+        )}
       </nav>
 
       <div className="nav-actions">
-        <NavLink to="/login" className="login-link">
-          Login
-        </NavLink>
+        {user ? (
+          <button
+            type="button"
+            className="button primary-button"
+            onClick={handleLogout}
+          >
+            Logout
+          </button>
+        ) : (
+          <NavLink to="/login" className="login-link">
+            Login
+          </NavLink>
+        )}
 
-        <Link to="/vehicles" className="nav-button">
-          Explore Cars
-        </Link>
+        {!isAdmin && (
+          <Link to="/vehicles" className="nav-button">
+            Explore Cars
+          </Link>
+        )}
       </div>
     </header>
   );
-
 }
+
+
 
 // HOME PAGE
 function Home() {
@@ -585,6 +624,241 @@ function Vehicles() {
     </main>
   );
 }
+// CUSTOMER BOOKING PAGE
+function CustomerBooking() {
+  const BOOKINGS_API = "http://localhost:5000/api/bookings";
+
+  const emptyForm = {
+    fullName: "",
+    phone: "",
+    email: "",
+    address: "",
+    vehicleId: "",
+    startDate: "",
+    endDate: "",
+  };
+
+  const [form, setForm] = useState(emptyForm);
+  const [vehicles, setVehicles] = useState([]);
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    async function loadVehicles() {
+      try {
+        const data = await request(API_URL);
+        setVehicles(
+          data.filter((vehicle) => vehicle.status === "Available")
+        );
+      } catch (error) {
+        setMessage(error.message);
+      }
+    }
+
+    loadVehicles();
+  }, []);
+
+  const selectedVehicle = vehicles.find(
+    (vehicle) => String(vehicle.id) === form.vehicleId
+  );
+
+  const days =
+    form.startDate &&
+    form.endDate &&
+    form.endDate >= form.startDate
+      ? Math.floor(
+          (new Date(form.endDate + "T00:00:00Z") -
+            new Date(form.startDate + "T00:00:00Z")) /
+            86400000
+        ) + 1
+      : 0;
+
+  const total = selectedVehicle
+    ? days * Number(selectedVehicle.pricePerDay ?? 0)
+    : 0;
+
+  function handleChange(event) {
+    setForm({
+      ...form,
+      [event.target.name]: event.target.value,
+    });
+  }
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+    setLoading(true);
+    setMessage("");
+
+    try {
+      if (!selectedVehicle) {
+        throw new Error("Please select an available vehicle.");
+      }
+
+      if (days < 1) {
+        throw new Error("Please enter valid rental dates.");
+      }
+
+      await request(BOOKINGS_API, {
+        method: "POST",
+        body: JSON.stringify({
+          fullName: form.fullName.trim(),
+          phone: form.phone.trim(),
+          email: form.email.trim(),
+          address: form.address.trim(),
+          vehicleId: Number(form.vehicleId),
+          startDate: form.startDate,
+          endDate: form.endDate,
+        }),
+      });
+
+      setForm(emptyForm);
+      setMessage(
+        "Booking submitted successfully! Your request has been received."
+      );
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <main className="page section">
+      <div className="page-heading">
+        <p className="eyebrow">BOOK YOUR NEXT RIDE</p>
+        <h1>Book a Vehicle</h1>
+        <p>
+          Enter your information, choose an available vehicle,
+          and select your rental dates.
+        </p>
+      </div>
+
+      <section className="management-panel customer-booking-panel">
+        <h2>Your Information</h2>
+        <p>Name and phone number are required.</p>
+
+        <form className="vehicle-form" onSubmit={handleSubmit}>
+          <label htmlFor="booking-fullName">Full Name</label>
+          <input
+            id="booking-fullName"
+            name="fullName"
+            value={form.fullName}
+            onChange={handleChange}
+            placeholder="e.g. Juan Dela Cruz"
+            required
+          />
+
+          <label htmlFor="booking-phone">Phone Number</label>
+          <input
+            id="booking-phone"
+            name="phone"
+            type="tel"
+            value={form.phone}
+            onChange={handleChange}
+            placeholder="e.g. 09123456789"
+            required
+          />
+
+          <label htmlFor="booking-email">Email</label>
+          <input
+            id="booking-email"
+            name="email"
+            type="email"
+            value={form.email}
+            onChange={handleChange}
+            placeholder="e.g. juan@email.com"
+          />
+
+          <label htmlFor="booking-address">Address</label>
+          <textarea
+            id="booking-address"
+            name="address"
+            value={form.address}
+            onChange={handleChange}
+            placeholder="Enter your address (optional)"
+            rows="3"
+          />
+
+          <label htmlFor="booking-vehicle">Choose Vehicle</label>
+          <select
+            id="booking-vehicle"
+            name="vehicleId"
+            value={form.vehicleId}
+            onChange={handleChange}
+            required
+          >
+            <option value="">Select an available vehicle</option>
+            {vehicles.map((vehicle) => (
+              <option key={vehicle.id} value={vehicle.id}>
+                {vehicle.brand} {vehicle.model} — ₱
+                {Number(vehicle.pricePerDay).toLocaleString("en-PH")}/day
+              </option>
+            ))}
+          </select>
+
+          <label htmlFor="booking-startDate">Rental Start Date</label>
+          <input
+            id="booking-startDate"
+            name="startDate"
+            type="date"
+            min={new Date().toLocaleDateString("en-CA")}
+            value={form.startDate}
+            onChange={handleChange}
+            required
+          />
+
+          <label htmlFor="booking-endDate">Rental End Date</label>
+          <input
+            id="booking-endDate"
+            name="endDate"
+            type="date"
+            min={form.startDate || new Date().toLocaleDateString("en-CA")}
+            value={form.endDate}
+            onChange={handleChange}
+            required
+          />
+
+          <div className="booking-total">
+            <p>
+              Rental Days: <strong>{days}</strong>
+            </p>
+            <p>
+              Estimated Total:{" "}
+              <strong>
+                ₱{total.toLocaleString("en-PH", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
+              </strong>
+            </p>
+          </div>
+
+          <div className="form-actions">
+            <button
+              type="submit"
+              className="button primary-button"
+              disabled={loading}
+            >
+              {loading ? "Submitting..." : "Submit Booking"}
+            </button>
+          </div>
+        </form>
+
+        {message && (
+          <p className="message" role="status">
+            {message}
+          </p>
+        )}
+
+        {vehicles.length === 0 && (
+          <p className="message">
+            No available vehicles were found. Please check again later.
+          </p>
+        )}
+      </section>
+    </main>
+  );
+}
 
 // CUSTOMERS PAGE
 function Customers() {
@@ -905,6 +1179,15 @@ function Rentals() {
 
     try {
       const isEditing = editingId !== null;
+      const selectedCustomer = customers.find(
+  (customer) => String(customer.id) === form.customerId
+);
+
+if (!selectedCustomer) {
+  setMessage("Please select a valid customer.");
+  setLoading(false);
+  return;
+}
 
       await request(
         isEditing
@@ -913,11 +1196,15 @@ function Rentals() {
         {
           method: isEditing ? "PUT" : "POST",
           body: JSON.stringify({
-            customerId: Number(form.customerId),
-            vehicleId: Number(form.vehicleId),
-            startDate: form.startDate,
-            endDate: form.endDate,
-          }),
+  fullName: selectedCustomer.fullName,
+  phone: selectedCustomer.phone,
+  email: selectedCustomer.email || "",
+  address: selectedCustomer.address || "",
+  vehicleId: Number(form.vehicleId),
+  startDate: form.startDate,
+  endDate: form.endDate,
+}),
+          
         }
       );
 
@@ -1312,6 +1599,63 @@ function Contact() {
   );
 }
 
+function AdminDashboard() {
+  const user = JSON.parse(
+    sessionStorage.getItem("driveEasyUser") || "null"
+  );
+
+  useEffect(() => {
+    if (!user || user.role !== "Admin") {
+      window.location.href = "/";
+    }
+  }, []);
+
+  if (!user || user.role !== "Admin") {
+    return null;
+  }
+
+  return (
+    <main className="section simple-page">
+      <p className="eyebrow">DRIVEEASY ADMINISTRATION</p>
+      <h1>Admin Dashboard</h1>
+      <p>
+        Welcome, {user.fullName || "Admin"}!
+        Manage your vehicle rental system here.
+      </p>
+
+      <div className="features admin-dashboard-grid">
+        <div>
+          <span className="feature-icon">📋</span>
+          <h3>Rental Management</h3>
+          <p>View bookings and manage rental status.</p>
+          <Link to="/rentals" className="button primary-button">
+            Manage Rentals
+          </Link>
+        </div>
+
+        <div>
+          <span className="feature-icon">👥</span>
+          <h3>Customer Management</h3>
+          <p>View and manage customer records.</p>
+          <Link to="/customers" className="button primary-button">
+            Manage Customers
+          </Link>
+        </div>
+
+        <div>
+          <span className="feature-icon">🚗</span>
+          <h3>Vehicle Management</h3>
+          <p>Add, edit, and remove vehicles.</p>
+          <Link to="/vehicles" className="button primary-button">
+            Manage Vehicles
+          </Link>
+        </div>
+      </div>
+    </main>
+  );
+}
+
+
 function NotFound() {
   return (
     <main className="section simple-page">
@@ -1338,16 +1682,22 @@ export default function App() {
   return (
     <BrowserRouter>
       <Navbar />
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/vehicles" element={<Vehicles />} />
-        <Route path="/customers" element={<Customers />} />
-        <Route path="/about" element={<About />} />
-        <Route path="/contact" element={<Contact />} />
-        <Route path="*" element={<NotFound />} />
-        <Route path="/rentals" element={<Rentals />} />
-        <Route path="/login" element={<Login />} />
-      </Routes>
+    
+      
+        <Routes>
+  <Route path="/" element={<Home />} />
+  <Route path="/vehicles" element={<Vehicles />} />
+  <Route path="/book" element={<CustomerBooking />} />
+  <Route path="/customers" element={<Customers />} />
+  <Route path="/about" element={<About />} />
+  <Route path="/contact" element={<Contact />} />
+  <Route path="/rentals" element={<Rentals />} />
+  <Route path="/login" element={<Login />} />
+  <Route path="/admin" element={<AdminDashboard />} />
+  <Route path="*" element={<NotFound />} />
+  
+</Routes>
+      
       <Footer />
     </BrowserRouter>
   );

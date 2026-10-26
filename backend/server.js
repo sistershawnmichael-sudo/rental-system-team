@@ -290,7 +290,11 @@ app.post(
 });
 
 // UPDATE vehicle
-app.put("/api/vehicles/:id", async (req, res) => {
+app.put(
+  "/api/vehicles/:id",
+  authenticateToken,
+  allowRoles("Admin"),
+  async (req, res) => {
   const { brand, model, plateNumber, pricePerDay, status } = req.body;
 
   if (
@@ -467,29 +471,7 @@ app.get(
 });
 
 // GET one customer
-app.get(
-  "/api/customers/:id",
-  authenticateToken,
-  allowRoles("Admin"),
-  async (req, res) => {
-  console.log("GET CUSTOMERS ROUTE 1 REACHED!");
-  try {
-    const result = await pool.query(
-      `SELECT ${customerFields} FROM customers WHERE id = $1`,
-      [req.params.id]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ message: "Customer not found." });
-    }
-
-    res.json(result.rows[0]);
-  } catch (error) {
-    console.error(error.message);
-    res.status(500).json({ message: "Failed to retrieve customer." });
-  }
-});
-
+  
 
 // ADD customer
 app.post(
@@ -577,52 +559,9 @@ app.put(
 
 
 // GET one customer
-app.get("/api/customers/:id", async (req, res) => {
-  console.log("GET CUSTOMERS ROUTE 1 REACHED!");
-  try {
-    const result = await pool.query(
-      `SELECT id, full_name AS "fullName",
-              phone, email, address,
-              created_at AS "createdAt"
-       FROM customers WHERE id = $1`,
-      [req.params.id]
-    );
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ message: "Customer not found." });
-    }
-
-    res.json(result.rows[0]);
-  } catch (error) {
-    res.status(500).json({ message: "Failed to fetch customer." });
-  }
-});
-
+  
 // CREATE customer
-app.post("/api/customers", async (req, res) => {
-  const { fullName, phone, email, address } = req.body;
-
-  if (!fullName?.trim() || !phone?.trim()) {
-    return res.status(400).json({
-      message: "Full name and phone number are required."
-    });
-  }
-
-  try {
-    const result = await pool.query(
-      `INSERT INTO customers (full_name, phone, email, address)
-       VALUES ($1, $2, $3, $4)
-       RETURNING id, full_name AS "fullName",
-                 phone, email, address,
-                 created_at AS "createdAt"`,
-      [fullName.trim(), phone.trim(), email || null, address || null]
-    );
-
-    res.status(201).json(result.rows[0]);
-  } catch (error) {
-    res.status(500).json({ message: "Failed to add customer." });
-  }
-});
 
 // UPDATE customer
 app.put("/api/customers/:id", async (req, res) => {
@@ -822,15 +761,16 @@ const newCustomerId = customerResult.rows[0].id;
    end_date AS "endDate",
    total_price::float AS "totalPrice",
    status`,
-      [
-       [newCustomerId, Number(vehicleId)],
-        startDate,
-        endDate,
-        totalPrice
-      ]
+     [
+  newCustomerId,
+  Number(vehicleId),
+  startDate,
+  endDate,
+  totalPrice
+]
     );
 
-    await client.query("COMMIT");
+await client.query("COMMIT");
     
     
 let emailSent = false;
