@@ -11,7 +11,6 @@ console.log("Auth middleware check:", {
   authenticateToken: typeof authenticateToken,
   allowRoles: typeof allowRoles
 });
-require("dotenv").config();
 
 const app = express();
 const PORT = 5000;
@@ -640,6 +639,117 @@ app.get(
   }
 });
 
+
+ // CHECK VEHICLE AVAILABILITY FOR SELECTED DATES
+app.get("/api/bookings/availability", async (req, res) => {
+  const { vehicleId, startDate, endDate } = req.query;
+
+  if (
+    !Number.isInteger(Number(vehicleId)) ||
+    Number(vehicleId) <= 0 ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(startDate || "") ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(endDate || "")
+  ) {
+    return res.status(400).json({
+      message: "Please select a vehicle and valid rental dates."
+    });
+  }
+
+  const start = new Date(`${startDate}T00:00:00Z`);
+  const end = new Date(`${endDate}T00:00:00Z`);
+
+  if (
+    Number.isNaN(start.getTime()) ||
+    Number.isNaN(end.getTime()) ||
+    start.toISOString().slice(0, 10) !== startDate ||
+    end.toISOString().slice(0, 10) !== endDate ||
+    end < start
+  ) {
+    return res.status(400).json({
+      message: "Please select valid rental dates."
+    });
+  }
+
+  try {
+    const vehicleResult = await pool.query(
+      "SELECT id, status FROM vehicles WHERE id = $1",
+      [Number(vehicleId)]
+    );
+
+if (vehicleResult.rows[0].status !== "Available") {
+  await client.query("ROLLBACK");
+  return res.status(409).json({
+    message: "This vehicle is currently unavailable."
+  });
+}
+
+    if (vehicleResult.rows[0].status !== "Available") {
+      return res.json({
+        available: false,
+        message: "This vehicle is currently unavailable."
+      });
+    }
+
+    const result = await pool.query(
+      `SELECT EXISTS (
+         SELECT 1
+         FROM bookings
+         WHERE vehicle_id = $1
+           AND status <> 'Cancelled'
+           AND start_date <= $3::date
+           AND end_date >= $2::date
+       ) AS booked`,
+      [Number(vehicleId), startDate, endDate]
+    );
+
+    const available = !result.rows[0].booked;
+
+    return res.json({
+      available,
+      message: available
+        ? "This vehicle is available for your selected dates!"
+        : "This vehicle is already booked for some of those dates."
+    });
+  } catch (error) {
+    console.error("Availability check error:", error.message);
+
+    return res.status(500).json({
+      message: "Unable to check vehicle availability."
+    });
+  }
+});
+
+app.get("/api/bookings/availability", async (req, res) => {
+  // Your existing availability code stays here.
+});
+
+// PASTE THE NEW DASHBOARD ROUTE HERE
+app.get("/api/admin/dashboard", authenticateToken, allowRoles("Admin"), async (req, res) => {
+  try {
+const [vehicles, available, customers, bookings] = await Promise.all([
+  pool.query("SELECT COUNT(*)::int AS total FROM vehicles"),
+  pool.query(
+    "SELECT COUNT(*)::int AS total FROM vehicles WHERE status = 'Available'"
+  ),
+  pool.query("SELECT COUNT(*)::int AS total FROM customers"),
+  pool.query("SELECT COUNT(*)::int AS total FROM bookings")
+]);
+
+res.json({
+  totalVehicles: vehicles.rows[0].total,
+  availableVehicles: available.rows[0].total,
+  totalCustomers: customers.rows[0].total,
+  totalBookings: bookings.rows[0].total
+});
+  } catch (error) {
+    console.error("Admin dashboard error:", error.message);
+    res.status(500).json({
+      message: "Unable to load dashboard statistics."
+    });
+  }
+});
+
+
 // CREATE a booking
 
 app.post("/api/bookings", async (req, res) => {
@@ -773,10 +883,10 @@ const newCustomerId = customerResult.rows[0].id;
 await client.query("COMMIT");
     
     
+
 let emailSent = false;
 
 try {
-  // Get the customer's email and the booked vehicle.
   const detailsResult = await pool.query(
     `SELECT
        c.full_name AS "fullName",
@@ -786,39 +896,70 @@ try {
      FROM customers c
      JOIN vehicles v ON v.id = $2
      WHERE c.id = $1`,
-    [Number(customerId), Number(vehicleId)]
+    [newCustomerId, Number(vehicleId)]
   );
 
-if (detailsResult.rows.length > 0 && detailsResult.rows[0].email) {
-    const details = detailsResult.rows[0];
-
-    await sendBookingConfirmation({
-      customer: {
-        fullName: details.fullName,
-        email: details.email,
-      },
-      vehicle: {
-        brand: details.brand,
-        model: details.model,
-      },
-      startDate,
-      endDate,
-      totalPrice,
-    });
-
-    emailSent = true;
-    console.log("Booking confirmation email sent.");
+  if (detailsResult.rows.length === 0) {
+    throw new Error("Customer or vehicle details not found.");
   }
+
+  const details = detailsResult.rows[0];
+  const recipient = details.email?.trim();
+
+  if (!recipient) {
+    throw new Error("The customer has no email address.");
+  }
+
+  const mailResult = await sendBookingConfirmation({
+    customer: {
+      fullName: details.fullName,
+      email: recipient,
+    },
+    vehicle: {
+      brand: details.brand,
+      model: details.model,
+    },
+    startDate,
+    endDate,
+    totalPrice,
+  });
+
+  if (!mailResult || !Array.isArray(mailResult.accepted)) {
+    throw new Error(
+      "Email service did not return recipient acceptance details. Check emailService.js."
+    );
+  }
+
+  const accepted = mailResult.accepted.some(
+    (address) =>
+      String(address).toLowerCase() === recipient.toLowerCase()
+  );
+
+  if (!accepted) {
+    throw new Error(
+      `The mail server did not accept the recipient: ${recipient}.`
+    );
+  }
+
+  emailSent = true;
+
+  console.log("Email accepted by mail server:", recipient);
+  console.log("Email message ID:", mailResult.messageId);
+  console.log("Mail server response:", mailResult.response);
+
 } catch (emailError) {
-  // The booking is already saved, so do not undo it.
   console.error(
     "Booking saved, but confirmation email failed:",
     emailError.message
   );
 }
 
+
+
 res.status(201).json({
-  message: "Booking created successfully.",
+  message: emailSent
+    ? "Booking created and confirmation email sent."
+    : "Booking created, but the confirmation email was not sent.",
   booking: bookingResult.rows[0],
   emailSent,
 });
@@ -916,8 +1057,10 @@ app.put(
     }
 
     const vehicle = await client.query(
-      `SELECT id, price_per_day
-       FROM vehicles WHERE id = $1 FOR UPDATE`,
+            `SELECT id, price_per_day, status
+      FROM vehicles
+      WHERE id = $1
+      FOR UPDATE`,
       [Number(vehicleId)]
     );
 
@@ -1073,6 +1216,130 @@ app.patch(
   }
 });
 
+
+
+ 
+ // AI CHATBOT — uses live PostgreSQL vehicle inventory
+app.post("/api/chat", async (req, res) => {
+  try {
+    const apiKey = process.env.OPENROUTER_API_KEY;
+    const model = process.env.OPENROUTER_MODEL;
+
+    if (!apiKey || !model) {
+      return res.status(500).json({
+        error: "OpenRouter configuration is missing from backend .env.",
+      });
+    }
+
+    const userMessage = req.body.message;
+
+    if (typeof userMessage !== "string" || !userMessage.trim()) {
+      return res.status(400).json({
+        error: "Please enter a message.",
+      });
+    }
+
+    // Get the real vehicle information from PostgreSQL.
+    const result = await pool.query(`
+      SELECT
+        brand,
+        model,
+        price_per_day::float AS "pricePerDay",
+        status
+      FROM vehicles
+      ORDER BY brand, model
+    `);
+
+    const vehicles = result.rows;
+
+    const availableVehicles = vehicles.filter(
+      (vehicle) =>
+        String(vehicle.status).toLowerCase() === "available"
+    );
+
+    const inventory = vehicles.map((vehicle) => ({
+      brand: vehicle.brand,
+      model: vehicle.model,
+      pricePerDay: vehicle.pricePerDay,
+      status: vehicle.status,
+    }));
+
+    const systemPrompt = `
+You are DriveEasy's helpful vehicle rental assistant.
+
+Use ONLY the live vehicle inventory provided below when answering
+questions about DriveEasy's actual vehicles, prices, and current status.
+
+LIVE VEHICLE INVENTORY:
+${JSON.stringify(inventory, null, 2)}
+
+CURRENTLY AVAILABLE VEHICLES:
+${JSON.stringify(availableVehicles, null, 2)}
+
+Rules:
+- Only say a vehicle is currently available if its database status is "Available".
+- Give the exact pricePerDay from the inventory. Prices are in Philippine pesos (PHP).
+- If no vehicles are available, say so clearly.
+- Never invent vehicle names, prices, or availability.
+- If the inventory is empty, say no vehicle records were found.
+- The status reflects the database's current vehicle status. It does not
+  guarantee availability for particular rental dates.
+- If asked about availability for specific dates, explain that the dates
+  must be checked by the booking system before confirming.
+- For unrelated questions, answer helpfully and concisely.
+- Never claim a booking has been made unless the booking system confirms it.
+`;
+
+    const response = await fetch(
+      "https://openrouter.ai/api/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+          "X-OpenRouter-Title": "DriveEasy",
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            {
+              role: "system",
+              content: systemPrompt,
+            },
+            {
+              role: "user",
+              content: userMessage.trim(),
+            },
+          ],
+        }),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error("OpenRouter error:", data);
+      return res.status(response.status).json({
+        error: data.error?.message || "AI request failed.",
+      });
+    }
+
+    const reply = data.choices?.[0]?.message?.content;
+
+    return res.json({
+      reply:
+        typeof reply === "string" && reply.trim()
+          ? reply
+          : "Sorry, I couldn't generate a response.",
+    });
+  } catch (error) {
+    console.error("Chat error:", error.message);
+
+    return res.status(500).json({
+      error: "Unable to retrieve vehicle information or generate a response.",
+    });
+  }
+});
 
 
  // START SERVER

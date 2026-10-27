@@ -1,4 +1,17 @@
-
+import {
+  LayoutDashboard,
+  CarFront,
+  Users,
+  CalendarDays,
+  ClipboardList,
+  LogOut,
+  LogIn,
+  House,
+  Info,
+  Phone,
+  CalendarCheck,
+} from "lucide-react";
+import Chatbot from "./Chatbot";
 import { useEffect, useState } from "react";
 import {
   BrowserRouter,
@@ -95,6 +108,7 @@ function Login() {
 
 
 
+
 async function request(url, options = {}) {
   const token = sessionStorage.getItem("driveEasyToken");
 
@@ -106,7 +120,6 @@ async function request(url, options = {}) {
       ...options.headers,
     },
   });
-  console.log("Request token exists:", Boolean(token));
 
   const data = await response.json();
 
@@ -118,7 +131,9 @@ async function request(url, options = {}) {
 }
 
 
+
 // NAVIGATION
+
 
 function Navbar() {
   const user = JSON.parse(
@@ -134,110 +149,226 @@ function Navbar() {
   }
 
   return (
-    <header className="navbar">
-      <Link to={isAdmin ? "/admin" : "/"} className="logo">
-        DriveEasy<span>.</span>
-      </Link>
-
-      <nav>
-        {isAdmin ? (
-          <>
-            <NavLink to="/admin">Dashboard</NavLink>
-            <NavLink to="/vehicles">Vehicles</NavLink>
-            <NavLink to="/customers">Customers</NavLink>
-            <NavLink to="/rentals">Rentals</NavLink>
-          </>
-        ) : (
-          <>
-            <NavLink to="/" end>Home</NavLink>
-            <NavLink to="/vehicles">Vehicles</NavLink>
-            <NavLink to="/book">Book a Vehicle</NavLink>
-            <NavLink to="/about">About Us</NavLink>
-            <NavLink to="/contact">Contact</NavLink>
-          </>
-        )}
-      </nav>
-
-      <div className="nav-actions">
-        {user ? (
-          <button
-            type="button"
-            className="button primary-button"
-            onClick={handleLogout}
-          >
-            Logout
-          </button>
-        ) : (
-          <NavLink to="/login" className="login-link">
-            Login
-          </NavLink>
-        )}
-
-        {!isAdmin && (
-          <Link to="/vehicles" className="nav-button">
-            Explore Cars
-          </Link>
-        )}
+    <aside className="sidebar">
+      <div className="sidebar-logo">
+        <h2>
+          Drive<span>Easy</span>
+        </h2>
+        <p>Rent a Car, Drive Your Way</p>
       </div>
-    </header>
+
+      
+<nav className="sidebar-nav">
+  {isAdmin ? (
+    <>
+      <NavLink to="/admin">
+        <LayoutDashboard size={20} />
+        <span>Dashboard</span>
+      </NavLink>
+
+      <NavLink to="/vehicles">
+        <CarFront size={20} />
+        <span>Vehicles</span>
+      </NavLink>
+
+      <NavLink to="/customers">
+        <Users size={20} />
+        <span>Customers</span>
+      </NavLink>
+
+      <NavLink to="/rentals">
+        <ClipboardList size={20} />
+        <span>Rentals</span>
+      </NavLink>
+
+      <NavLink to="/calendar">
+        <CalendarDays size={20} />
+        <span>Calendar</span>
+      </NavLink>
+    </>
+  ) : (
+    <>
+      <NavLink to="/">
+        <House size={20} />
+        <span>Home</span>
+      </NavLink>
+
+      <NavLink to="/vehicles">
+        <CarFront size={20} />
+        <span>Vehicles</span>
+      </NavLink>
+
+      <NavLink to="/book">
+        <CalendarCheck size={20} />
+        <span>Book a Vehicle</span>
+      </NavLink>
+
+      <NavLink to="/about">
+        <Info size={20} />
+        <span>About Us</span>
+      </NavLink>
+
+      <NavLink to="/contact">
+        <Phone size={20} />
+        <span>Contact</span>
+      </NavLink>
+    </>
+  )}
+</nav>
+
+
+      {user ? (
+<button
+  className="sidebar-logout"
+  onClick={handleLogout}
+>
+  <LogOut size={20} />
+  <span>Logout</span>
+</button>
+      ) : (
+<NavLink className="sidebar-login" to="/login">
+  <LogIn size={20} />
+  <span>Login</span>
+</NavLink>
+      )}
+    </aside>
   );
 }
 
 
 
-// HOME PAGE
+
+
+ // HOME PAGE
+
 function Home() {
   return (
-    <main>
-      <section className="hero">
-        <div className="hero-content">
-          <p className="eyebrow">WELCOME TO DRIVE EASY</p>
-          <h1>Your journey.<br />Your freedom.</h1>
-          <p>
-            Find the perfect vehicle for your next trip.
-            Affordable daily rates and a simple rental experience.
+    <main className="home-page">
+      <section className="home-hero">
+        <div className="home-hero-content">
+          <span className="home-eyebrow">
+            PREMIUM CAR RENTAL EXPERIENCE
+          </span>
+
+          <h1>
+            Your journey.
+            <br />
+            <span>Your way.</span>
+          </h1>
+
+          <p className="home-description">
+            Discover the freedom of the open road.
+            Choose your perfect vehicle and enjoy a
+            smooth, comfortable, and affordable ride.
           </p>
-          <Link to="/vehicles" className="button primary-button">
-            Explore Our Vehicles →
-          </Link>
+
+          <div className="home-actions">
+            <Link to="/vehicles" className="home-btn home-btn-primary">
+              Explore Our Cars <span>→</span>
+            </Link>
+
+            <Link to="/book" className="home-btn home-btn-secondary">
+              Book Your Ride
+            </Link>
+          </div>
+
+          <div className="home-highlights">
+            <span>✓ Easy Reservations</span>
+            <span>✓ Affordable Prices</span>
+            <span>✓ Quality Vehicles</span>
+          </div>
         </div>
 
-        <div className="hero-visual">
-          <span className="hero-car">🚘</span>
-          <div className="hero-label">
-            <strong>Drive your way.</strong>
-            <p>Your next adventure starts here.</p>
+        <div className="home-hero-visual">
+          <img
+            src="https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=1400&q=90"
+            alt="Luxury sports car"
+          />
+
+          <div className="home-image-label">
+            <span className="home-label-dot"></span>
+            <div>
+              <strong>Find Your Perfect Ride</strong>
+              <p>Your next adventure starts here.</p>
+            </div>
           </div>
+
+          <div className="home-image-number">01 / DRIVE EASY</div>
         </div>
       </section>
 
-      <section className="features section">
-        <div>
-          <span className="feature-icon">🚗</span>
-          <h3>Quality Vehicles</h3>
-          <p>Choose from our vehicle collection.</p>
+      <section className="home-benefits">
+        <div className="home-section-heading">
+          <span>THE DRIVE EASY ADVANTAGE</span>
+          <h2>Everything you need for the road.</h2>
+          <p>A better rental experience, from booking to arrival.</p>
         </div>
-        <div>
-          <span className="feature-icon">₱</span>
-          <h3>Affordable Rates</h3>
-          <p>Clear daily rental prices.</p>
-        </div>
-        <div>
-          <span className="feature-icon">✓</span>
-          <h3>Easy Booking</h3>
-          <p>Find the right vehicle for your plans.</p>
+
+        <div className="home-benefit-grid">
+          <article className="home-benefit-card">
+            <div className="home-benefit-icon">01</div>
+            <h3>Quality Vehicles</h3>
+            <p>
+              Explore our vehicle collection and find
+              the right car for your next destination.
+            </p>
+            <Link to="/vehicles">View vehicles ↗</Link>
+          </article>
+
+          <article className="home-benefit-card">
+            <div className="home-benefit-icon">02</div>
+            <h3>Affordable Rates</h3>
+            <p>
+              Find a vehicle that fits your budget
+              with clear and competitive daily rates.
+            </p>
+            <Link to="/vehicles">Compare vehicles ↗</Link>
+          </article>
+
+          <article className="home-benefit-card">
+            <div className="home-benefit-icon">03</div>
+            <h3>Easy Booking</h3>
+            <p>
+              Choose your preferred vehicle and
+              make planning your trip simple.
+            </p>
+            <Link to="/book">Book a vehicle ↗</Link>
+          </article>
         </div>
       </section>
 
       <section className="home-cta">
-        <h2>Ready for your next ride?</h2>
-        <p>Explore our vehicles and find your perfect match.</p>
-        <Link to="/vehicles" className="button primary-button">
-          View Vehicles
+        <div>
+          <span>YOUR NEXT ADVENTURE AWAITS</span>
+          <h2>Ready to hit the road?</h2>
+          <p>Find your ride and make every journey count.</p>
+        </div>
+
+        <Link to="/vehicles" className="home-btn home-btn-primary">
+          Find Your Car →
         </Link>
       </section>
     </main>
   );
+}
+
+
+
+function getVehicleImage(brand, model) {
+  const vehicleImages = {
+    "toyota vios": "/cars/toyota-vios.png",
+    "honda civic": "/cars/honda-civic.jpg",
+    "mitsubishi mirage": "/cars/mitsubishi-mirage.png",
+    "toyota fortuner": "/cars/toyota-fortuner.jpg",
+    "bmw m2": "/cars/bmw-m2.avif",
+  };
+
+  const vehicleName = `${brand || ""} ${model || ""}`
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+
+  return vehicleImages[vehicleName] || "/cars/default-car.png";
 }
 
 // VEHICLES PAGE
@@ -255,7 +386,9 @@ function Vehicles() {
     pricePerDay: "",
     status: "Available",
   };
-
+  
+  const [vehicleSearch, setVehicleSearch] = useState("");
+  const [availabilityFilter, setAvailabilityFilter] = useState("All");
   const [vehicles, setVehicles] = useState([]);
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
@@ -414,6 +547,22 @@ function Vehicles() {
     }
   }
 
+const filteredVehicles = vehicles.filter((vehicle) => {
+  const search = vehicleSearch.trim().toLowerCase();
+
+  const matchesSearch =
+    `${vehicle.brand} ${vehicle.model} ${vehicle.plateNumber}`
+      .toLowerCase()
+      .includes(search);
+
+  const matchesAvailability =
+    availabilityFilter === "All" ||
+    vehicle.status?.toLowerCase() ===
+      availabilityFilter.toLowerCase();
+
+  return matchesSearch && matchesAvailability;
+});
+
   return (
     <main className="page section">
       <div className="page-heading">
@@ -519,6 +668,34 @@ function Vehicles() {
           <p>Check vehicle details and availability.</p>
         </div>
 
+        <div className="vehicle-search-panel">
+  <input
+    type="search"
+    placeholder="Search brand, model, or plate number..."
+    value={vehicleSearch}
+    onChange={(event) => setVehicleSearch(event.target.value)}
+  />
+
+  <select
+    value={availabilityFilter}
+    onChange={(event) => setAvailabilityFilter(event.target.value)}
+  >
+    <option value="All">All Vehicles</option>
+    <option value="Available">Available</option>
+    <option value="Rented">Rented</option>
+  </select>
+
+  <button
+    type="button"
+    onClick={() => {
+      setVehicleSearch("");
+      setAvailabilityFilter("All");
+    }}
+  >
+    Clear Filters
+  </button>
+</div>
+
         <button
           type="button"
           className="button secondary-button"
@@ -559,12 +736,22 @@ function Vehicles() {
       </p>
 
       <div className="vehicle-grid">
-        {vehicles.map((vehicle) => (
+        {filteredVehicles.map((vehicle) => (
           <article className="vehicle-card" key={vehicle.id}>
-            <div className="vehicle-image">
-              <span>🚘</span>
-              <small>ID #{vehicle.id}</small>
-            </div>
+
+<div className="vehicle-image">
+  <img
+    src={getVehicleImage(vehicle.brand, vehicle.model)}
+    alt={`${vehicle.brand} ${vehicle.model}`}
+    onError={(event) => {
+      if (!event.currentTarget.dataset.fallback) {
+        event.currentTarget.dataset.fallback = "true";
+        event.currentTarget.src = "/cars/default-car.png";
+      }
+    }}
+  />
+  <small>ID #{vehicle.id}</small>
+</div>
 
             <div className="vehicle-info">
               <div className="vehicle-title">
@@ -625,8 +812,11 @@ function Vehicles() {
   );
 }
 // CUSTOMER BOOKING PAGE
+
 function CustomerBooking() {
   const BOOKINGS_API = "http://localhost:5000/api/bookings";
+  const AVAILABILITY_API =
+    "http://localhost:5000/api/bookings/availability";
 
   const emptyForm = {
     fullName: "",
@@ -641,15 +831,15 @@ function CustomerBooking() {
   const [form, setForm] = useState(emptyForm);
   const [vehicles, setVehicles] = useState([]);
   const [message, setMessage] = useState("");
+  const [availability, setAvailability] = useState(null);
+  const [checkingAvailability, setCheckingAvailability] = useState(false);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     async function loadVehicles() {
       try {
         const data = await request(API_URL);
-        setVehicles(
-          data.filter((vehicle) => vehicle.status === "Available")
-        );
+        setVehicles(data);
       } catch (error) {
         setMessage(error.message);
       }
@@ -678,11 +868,76 @@ function CustomerBooking() {
     : 0;
 
   function handleChange(event) {
-    setForm({
-      ...form,
-      [event.target.name]: event.target.value,
-    });
+    const { name, value } = event.target;
+
+    setForm((previous) => ({
+      ...previous,
+      [name]: value,
+    }));
+
+    if (["vehicleId", "startDate", "endDate"].includes(name)) {
+      setAvailability(null);
+    }
   }
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function checkAvailability() {
+      if (
+        !form.vehicleId ||
+        !form.startDate ||
+        !form.endDate ||
+        form.endDate < form.startDate ||
+        !selectedVehicle
+      ) {
+        setAvailability(null);
+        setCheckingAvailability(false);
+        return;
+      }
+
+      setAvailability(null);
+      setCheckingAvailability(true);
+
+      try {
+        const params = new URLSearchParams({
+          vehicleId: form.vehicleId,
+          startDate: form.startDate,
+          endDate: form.endDate,
+        });
+
+        const result = await request(
+          `${AVAILABILITY_API}?${params.toString()}`
+        );
+
+        if (!cancelled) {
+          setAvailability(result);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setAvailability({
+            available: false,
+            message: error.message,
+          });
+        }
+      } finally {
+        if (!cancelled) {
+          setCheckingAvailability(false);
+        }
+      }
+    }
+
+    checkAvailability();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    form.vehicleId,
+    form.startDate,
+    form.endDate,
+    selectedVehicle?.status,
+  ]);
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -691,14 +946,24 @@ function CustomerBooking() {
 
     try {
       if (!selectedVehicle) {
-        throw new Error("Please select an available vehicle.");
+        throw new Error("Please select a vehicle.");
       }
 
       if (days < 1) {
         throw new Error("Please enter valid rental dates.");
       }
 
-      await request(BOOKINGS_API, {
+if (checkingAvailability || availability === null) {
+  throw new Error("Please wait for the availability check.");
+}
+
+if (availability.available !== true) {
+  throw new Error(
+    availability.message || "This vehicle is unavailable for these dates."
+  );
+}
+
+      const result = await request(BOOKINGS_API, {
         method: "POST",
         body: JSON.stringify({
           fullName: form.fullName.trim(),
@@ -712,8 +977,10 @@ function CustomerBooking() {
       });
 
       setForm(emptyForm);
+      setAvailability(null);
       setMessage(
-        "Booking submitted successfully! Your request has been received."
+        result.message ||
+          "Booking submitted successfully! Your request has been received."
       );
     } catch (error) {
       setMessage(error.message);
@@ -722,14 +989,21 @@ function CustomerBooking() {
     }
   }
 
+  const today = new Date();
+  const todayString = [
+    today.getFullYear(),
+    String(today.getMonth() + 1).padStart(2, "0"),
+    String(today.getDate()).padStart(2, "0"),
+  ].join("-");
+
   return (
     <main className="page section">
       <div className="page-heading">
         <p className="eyebrow">BOOK YOUR NEXT RIDE</p>
         <h1>Book a Vehicle</h1>
         <p>
-          Enter your information, choose an available vehicle,
-          and select your rental dates.
+          Choose a vehicle and rental dates to check availability
+          before submitting your booking.
         </p>
       </div>
 
@@ -787,7 +1061,7 @@ function CustomerBooking() {
             onChange={handleChange}
             required
           >
-            <option value="">Select an available vehicle</option>
+            <option value="">Select a vehicle</option>
             {vehicles.map((vehicle) => (
               <option key={vehicle.id} value={vehicle.id}>
                 {vehicle.brand} {vehicle.model} — ₱
@@ -801,7 +1075,7 @@ function CustomerBooking() {
             id="booking-startDate"
             name="startDate"
             type="date"
-            min={new Date().toLocaleDateString("en-CA")}
+            min={todayString}
             value={form.startDate}
             onChange={handleChange}
             required
@@ -812,11 +1086,30 @@ function CustomerBooking() {
             id="booking-endDate"
             name="endDate"
             type="date"
-            min={form.startDate || new Date().toLocaleDateString("en-CA")}
+            min={form.startDate || todayString}
             value={form.endDate}
             onChange={handleChange}
             required
           />
+
+          {checkingAvailability && (
+            <p className="message" role="status">
+              Checking vehicle availability...
+            </p>
+          )}
+
+          {!checkingAvailability && availability && (
+            <p
+              className="message"
+              role="status"
+              style={{
+                color: availability.available ? "green" : "crimson",
+                fontWeight: 600,
+              }}
+            >
+              {availability.message}
+            </p>
+          )}
 
           <div className="booking-total">
             <p>
@@ -837,9 +1130,17 @@ function CustomerBooking() {
             <button
               type="submit"
               className="button primary-button"
-              disabled={loading}
+              disabled={
+                loading ||
+                checkingAvailability ||
+                availability?.available !== true
+              }
             >
-              {loading ? "Submitting..." : "Submit Booking"}
+              {loading
+                ? "Submitting..."
+                : checkingAvailability
+                  ? "Checking Availability..."
+                  : "Submit Booking"}
             </button>
           </div>
         </form>
@@ -849,16 +1150,11 @@ function CustomerBooking() {
             {message}
           </p>
         )}
-
-        {vehicles.length === 0 && (
-          <p className="message">
-            No available vehicles were found. Please check again later.
-          </p>
-        )}
       </section>
     </main>
   );
 }
+
 
 // CUSTOMERS PAGE
 function Customers() {
@@ -1104,6 +1400,9 @@ function Rentals() {
   const [statusFilter, setStatusFilter] = useState("All");
 
   async function loadData() {
+    setLoading(true);
+    setMessage("Loading booking records...");
+
     try {
       const [customerData, vehicleData, bookingData] =
         await Promise.all([
@@ -1115,8 +1414,12 @@ function Rentals() {
       setCustomers(customerData);
       setVehicles(vehicleData);
       setBookings(bookingData);
+      setMessage(`Loaded ${bookingData.length} booking record(s).`);
     } catch (error) {
-      setMessage(error.message);
+      console.error("Failed to load booking records:", error);
+      setMessage(`Could not load bookings: ${error.message}`);
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -1276,131 +1579,17 @@ if (!selectedCustomer) {
 
   return (
     <main className="page section">
-      <div className="page-heading">
-        <p className="eyebrow">DRIVEEASY MANAGEMENT</p>
-        <h1>Rentals & Bookings</h1>
-        <p>Create, edit, and manage your vehicle rental bookings.</p>
+    <div className="page-heading">
+      <p className="eyebrow">DRIVEEASY MANAGEMENT</p>
+      <h1>Booking Records</h1>
+      <p>View and manage your vehicle rental bookings.</p>
+    </div>
+
+    <div className="list-heading">
+      <div>
+        <h2>All Bookings</h2>
+        <p>Search and manage rental reservations.</p>
       </div>
-
-      <section className="management-panel">
-        <h2>
-          {editingId !== null
-            ? `Edit Booking #${editingId}`
-            : "Create a Booking"}
-        </h2>
-
-        <form className="vehicle-form" onSubmit={handleSubmit}>
-          <label htmlFor="bookingCustomer">Customer</label>
-          <select
-            id="bookingCustomer"
-            value={form.customerId}
-            onChange={(e) =>
-              setForm({ ...form, customerId: e.target.value })
-            }
-            required
-          >
-            <option value="">Select a customer</option>
-            {customers.map((customer) => (
-              <option key={customer.id} value={customer.id}>
-                {customer.fullName ?? customer.full_name}
-              </option>
-            ))}
-          </select>
-
-          <label htmlFor="bookingVehicle">Vehicle</label>
-          <select
-            id="bookingVehicle"
-            value={form.vehicleId}
-            onChange={(e) =>
-              setForm({ ...form, vehicleId: e.target.value })
-            }
-            required
-          >
-            <option value="">Select a vehicle</option>
-            {vehicles.map((vehicle) => (
-              <option key={vehicle.id} value={vehicle.id}>
-                {vehicle.brand} {vehicle.model} —{" "}
-                {vehicle.plateNumber ?? vehicle.plate_number}
-              </option>
-            ))}
-          </select>
-
-          <label htmlFor="bookingStart">Rental Start Date</label>
-          <input
-            id="bookingStart"
-            type="date"
-            value={form.startDate}
-            onChange={(e) =>
-              setForm({
-                ...form,
-                startDate: e.target.value,
-                endDate:
-                  form.endDate && form.endDate < e.target.value
-                    ? ""
-                    : form.endDate,
-              })
-            }
-            required
-          />
-
-          <label htmlFor="bookingEnd">Rental End Date</label>
-          <input
-            id="bookingEnd"
-            type="date"
-            min={form.startDate || undefined}
-            value={form.endDate}
-            onChange={(e) =>
-              setForm({ ...form, endDate: e.target.value })
-            }
-            required
-          />
-
-          <p>
-            Rental Days: <strong>{days}</strong>
-          </p>
-          <p>
-            Estimated Total:{" "}
-            <strong>
-              ₱
-              {total.toLocaleString("en-PH", {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}
-            </strong>
-          </p>
-
-          <div className="form-actions">
-            <button
-              type="submit"
-              className="button primary-button"
-              disabled={loading}
-            >
-              {loading
-                ? "Please wait..."
-                : editingId !== null
-                  ? "Save Changes"
-                  : "Create Booking"}
-            </button>
-
-            {editingId !== null && (
-              <button
-                type="button"
-                className="button secondary-button"
-                onClick={resetForm}
-                disabled={loading}
-              >
-                Stop Editing
-              </button>
-            )}
-          </div>
-        </form>
-      </section>
-
-      <div className="list-heading">
-        <div>
-          <h2>Booking Records</h2>
-          <p>Manage booking details and track rental progress.</p>
-        </div>
 
         <button
           type="button"
@@ -1546,6 +1735,306 @@ if (!selectedCustomer) {
   );
 }
 
+
+ // BOOKING CALENDAR PAGE
+
+function BookingCalendar() {
+  const BOOKINGS_API = "http://localhost:5000/api/bookings";
+
+  const [bookings, setBookings] = useState([]);
+  const [currentMonth, setCurrentMonth] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
+  const [selectedBooking, setSelectedBooking] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState("");
+
+  const user = JSON.parse(
+    sessionStorage.getItem("driveEasyUser") || "null"
+  );
+
+  useEffect(() => {
+    if (!user || user.role !== "Admin") {
+      window.location.href = "/";
+      return;
+    }
+
+    async function loadBookings() {
+      try {
+        setLoading(true);
+        const data = await request(BOOKINGS_API);
+        setBookings(data);
+        setMessage("");
+      } catch (error) {
+        setMessage("Could not load bookings: " + error.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadBookings();
+  }, []);
+
+  if (!user || user.role !== "Admin") {
+    return null;
+  }
+
+  const year = currentMonth.getFullYear();
+  const month = currentMonth.getMonth();
+
+  const firstDay = new Date(year, month, 1);
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  // Make Monday the first day of the week.
+  const startingOffset = (firstDay.getDay() + 6) % 7;
+  const totalCells = Math.ceil(
+    (startingOffset + daysInMonth) / 7
+  ) * 7;
+
+  const calendarDates = Array.from(
+    { length: totalCells },
+    (_, index) => {
+      const day = index - startingOffset + 1;
+
+      if (day < 1 || day > daysInMonth) {
+        return null;
+      }
+
+      return new Date(year, month, day);
+    }
+  );
+
+  function dateKey(value) {
+    return String(value).slice(0, 10);
+  }
+
+  function formatDate(value) {
+    if (!value) return "Not provided";
+
+    const date = new Date(dateKey(value) + "T00:00:00");
+    return date.toLocaleDateString("en-PH", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  }
+
+  function bookingsForDate(date) {
+    if (!date) return [];
+
+    const key = [
+      date.getFullYear(),
+      String(date.getMonth() + 1).padStart(2, "0"),
+      String(date.getDate()).padStart(2, "0"),
+    ].join("-");
+
+    return bookings.filter((booking) => {
+      if (!booking.startDate || !booking.endDate) return false;
+
+      const start = dateKey(booking.startDate);
+      const end = dateKey(booking.endDate);
+
+      return key >= start && key <= end;
+    });
+  }
+
+  function changeMonth(amount) {
+    setCurrentMonth(
+      new Date(year, month + amount, 1)
+    );
+    setSelectedBooking(null);
+  }
+
+  const today = new Date();
+  const todayKey = [
+    today.getFullYear(),
+    String(today.getMonth() + 1).padStart(2, "0"),
+    String(today.getDate()).padStart(2, "0"),
+  ].join("-");
+
+  return (
+    <main className="page section booking-calendar-page">
+      <div className="page-heading">
+        <p className="eyebrow">DRIVEEASY MANAGEMENT</p>
+        <h1>Booking Calendar</h1>
+        <p>
+          View vehicle reservations by date and check their status.
+        </p>
+      </div>
+
+      <section className="management-panel calendar-panel">
+        <div className="calendar-toolbar">
+          <button
+            type="button"
+            className="button secondary-button"
+            onClick={() => changeMonth(-1)}
+          >
+            ← Previous
+          </button>
+
+          <h2>
+            {currentMonth.toLocaleDateString("en-PH", {
+              month: "long",
+              year: "numeric",
+            })}
+          </h2>
+
+          <button
+            type="button"
+            className="button secondary-button"
+            onClick={() => changeMonth(1)}
+          >
+            Next →
+          </button>
+        </div>
+
+        {loading && <p>Loading bookings...</p>}
+
+        {message && (
+          <p className="message" role="alert">{message}</p>
+        )}
+
+        {!loading && !message && (
+          <>
+            <div className="calendar-grid calendar-weekdays">
+              {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(
+                (day) => (
+                  <div key={day}>{day}</div>
+                )
+              )}
+            </div>
+
+            <div className="calendar-grid calendar-days">
+              {calendarDates.map((date, index) => {
+                if (!date) {
+                  return (
+                    <div
+                      className="calendar-day calendar-empty"
+                      key={`empty-${index}`}
+                    />
+                  );
+                }
+
+                const dayBookings = bookingsForDate(date);
+
+                const key = [
+                  date.getFullYear(),
+                  String(date.getMonth() + 1).padStart(2, "0"),
+                  String(date.getDate()).padStart(2, "0"),
+                ].join("-");
+
+                return (
+                  <div
+                    className={
+                      "calendar-day" +
+                      (key === todayKey ? " calendar-today" : "")
+                    }
+                    key={key}
+                  >
+                    <strong className="calendar-date">
+                      {date.getDate()}
+                    </strong>
+
+                    {dayBookings.map((booking) => (
+                      <button
+                        type="button"
+                        key={booking.id}
+                        className={
+                          "calendar-booking status-" +
+                          String(booking.status || "Pending").toLowerCase()
+                        }
+                        title={
+                          `${booking.customerName || "Customer"} - ` +
+                          `${booking.brand || ""} ${booking.model || ""}`
+                        }
+                        onClick={() => setSelectedBooking(booking)}
+                      >
+                        #{booking.id}{" "}
+                        {booking.brand || "Vehicle"}{" "}
+                        {booking.model || ""}
+                      </button>
+                    ))}
+
+                    {dayBookings.length === 0 && (
+                      <span className="calendar-no-booking">—</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="calendar-legend">
+              <span><i className="legend-pending" /> Pending</span>
+              <span><i className="legend-confirmed" /> Confirmed</span>
+              <span><i className="legend-completed" /> Completed</span>
+              <span><i className="legend-cancelled" /> Cancelled</span>
+            </div>
+          </>
+        )}
+      </section>
+
+      {selectedBooking && (
+        <section className="management-panel calendar-details">
+          <div className="calendar-details-heading">
+            <h2>Booking #{selectedBooking.id}</h2>
+            <button
+              type="button"
+              className="button secondary-button"
+              onClick={() => setSelectedBooking(null)}
+            >
+              Close
+            </button>
+          </div>
+
+          <p>
+            <strong>Customer:</strong>{" "}
+            {selectedBooking.customerName || "Not provided"}
+          </p>
+
+          <p>
+            <strong>Vehicle:</strong>{" "}
+            {selectedBooking.brand || ""} {selectedBooking.model || ""}
+          </p>
+
+          <p>
+            <strong>Plate Number:</strong>{" "}
+            {selectedBooking.plateNumber || "Not provided"}
+          </p>
+
+          <p>
+            <strong>Start:</strong>{" "}
+            {formatDate(selectedBooking.startDate)}
+          </p>
+
+          <p>
+            <strong>End:</strong>{" "}
+            {formatDate(selectedBooking.endDate)}
+          </p>
+
+          <p>
+            <strong>Status:</strong>{" "}
+            {selectedBooking.status || "Pending"}
+          </p>
+
+          <p>
+            <strong>Total:</strong>{" "}
+            ₱{Number(selectedBooking.totalPrice || 0).toLocaleString(
+              "en-PH",
+              { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+            )}
+          </p>
+
+          <Link to="/rentals" className="button primary-button">
+            Manage Bookings
+          </Link>
+        </section>
+      )}
+    </main>
+  );
+}
+
+
 // ABOUT PAGE
 function About() {
   return (
@@ -1599,62 +2088,6 @@ function Contact() {
   );
 }
 
-function AdminDashboard() {
-  const user = JSON.parse(
-    sessionStorage.getItem("driveEasyUser") || "null"
-  );
-
-  useEffect(() => {
-    if (!user || user.role !== "Admin") {
-      window.location.href = "/";
-    }
-  }, []);
-
-  if (!user || user.role !== "Admin") {
-    return null;
-  }
-
-  return (
-    <main className="section simple-page">
-      <p className="eyebrow">DRIVEEASY ADMINISTRATION</p>
-      <h1>Admin Dashboard</h1>
-      <p>
-        Welcome, {user.fullName || "Admin"}!
-        Manage your vehicle rental system here.
-      </p>
-
-      <div className="features admin-dashboard-grid">
-        <div>
-          <span className="feature-icon">📋</span>
-          <h3>Rental Management</h3>
-          <p>View bookings and manage rental status.</p>
-          <Link to="/rentals" className="button primary-button">
-            Manage Rentals
-          </Link>
-        </div>
-
-        <div>
-          <span className="feature-icon">👥</span>
-          <h3>Customer Management</h3>
-          <p>View and manage customer records.</p>
-          <Link to="/customers" className="button primary-button">
-            Manage Customers
-          </Link>
-        </div>
-
-        <div>
-          <span className="feature-icon">🚗</span>
-          <h3>Vehicle Management</h3>
-          <p>Add, edit, and remove vehicles.</p>
-          <Link to="/vehicles" className="button primary-button">
-            Manage Vehicles
-          </Link>
-        </div>
-      </div>
-    </main>
-  );
-}
-
 
 function NotFound() {
   return (
@@ -1678,27 +2111,190 @@ function Footer() {
 }
 
 // MAIN APP
+
+
+function AdminDashboard() {
+  const [stats, setStats] = useState({
+    totalVehicles: 0,
+    availableVehicles: 0,
+    totalCustomers: 0,
+    totalBookings: 0
+  });
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  async function loadDashboard() {
+    try {
+      setLoading(true);
+      setError("");
+
+      const token = sessionStorage.getItem("driveEasyToken");
+      const response = await fetch(
+        "http://localhost:5000/api/admin/dashboard",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Unable to load dashboard.");
+      }
+
+      setStats({
+        totalVehicles: data.totalVehicles ?? 0,
+        availableVehicles: data.availableVehicles ?? 0,
+        totalCustomers: data.totalCustomers ?? 0,
+        totalBookings: data.totalBookings ?? 0
+      });
+    } catch (err) {
+      setError(err.message || "Unable to load dashboard.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadDashboard();
+  }, []);
+
+  const statsCards = [
+    {
+      title: "Total Vehicles",
+      value: stats.totalVehicles,
+      icon: "🚘"
+    },
+    {
+      title: "Available Vehicles",
+      value: stats.availableVehicles,
+      icon: "☑️"
+    },
+    {
+      title: "Registered Customers",
+      value: stats.totalCustomers,
+      icon: "👥"
+    },
+    {
+      title: "Total Bookings",
+      value: stats.totalBookings,
+      icon: "▤"
+    }
+  ];
+
+  const managementCards = [
+    {
+      title: "Rental Management",
+      description: "View bookings and manage rental status.",
+      button: "Manage Rentals",
+      icon: "▤",
+      path: "/rentals"
+    },
+    {
+      title: "Customer Management",
+      description: "View and manage customer records.",
+      button: "Manage Customers",
+      icon: "👥",
+      path: "/customers"
+    },
+    {
+      title: "Vehicle Management",
+      description: "Add, edit, and remove vehicles.",
+      button: "Manage Vehicles",
+      icon: "🚘",
+      path: "/vehicles"
+    }
+  ];
+
+  return (
+    <main className="admin-dashboard">
+      <div className="dashboard-heading">
+        <span className="dashboard-eyebrow">
+          DRIVEEASY ADMINISTRATION
+        </span>
+        <h1>Admin Dashboard</h1>
+        <p>
+          Welcome to DriveEasy! Here is an overview of your vehicle
+          rental system.
+        </p>
+      </div>
+
+      <section className="dashboard-section">
+        <h2 className="dashboard-overview-title">System Overview</h2>
+
+        {loading ? (
+          <p className="dashboard-message">Loading dashboard statistics...</p>
+        ) : error ? (
+          <div className="dashboard-message dashboard-error">
+            <p>{error}</p>
+            <button onClick={loadDashboard} className="dashboard-button">
+              Try Again
+            </button>
+          </div>
+        ) : (
+          <div className="dashboard-cards">
+            {statsCards.map((card) => (
+              <article className="dashboard-card" key={card.title}>
+                <span className="dashboard-card-icon">{card.icon}</span>
+                <p>{card.title}</p>
+                <h3>
+                  {Number(card.value).toLocaleString("en-PH")}
+                </h3>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="dashboard-management">
+        <div className="dashboard-action-grid">
+          {managementCards.map((card) => (
+            <article className="dashboard-action" key={card.title}>
+              <span className="dashboard-action-icon">{card.icon}</span>
+              <h3>{card.title}</h3>
+              <p>{card.description}</p>
+              <Link to={card.path} className="dashboard-button">
+                {card.button}
+              </Link>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <footer className="dashboard-footer">
+        <span>✦ DRIVEEASY</span>
+        <span>PREMIUM RENTAL MANAGEMENT</span>
+      </footer>
+    </main>
+  );
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <Navbar />
-    
-      
+
+      <div className="main-content">
         <Routes>
-  <Route path="/" element={<Home />} />
-  <Route path="/vehicles" element={<Vehicles />} />
-  <Route path="/book" element={<CustomerBooking />} />
-  <Route path="/customers" element={<Customers />} />
-  <Route path="/about" element={<About />} />
-  <Route path="/contact" element={<Contact />} />
-  <Route path="/rentals" element={<Rentals />} />
-  <Route path="/login" element={<Login />} />
-  <Route path="/admin" element={<AdminDashboard />} />
-  <Route path="*" element={<NotFound />} />
-  
-</Routes>
-      
-      <Footer />
+          <Route path="/" element={<Home />} />
+          <Route path="/vehicles" element={<Vehicles />} />
+          <Route path="/customers" element={<Customers />} />
+          <Route path="/rentals" element={<Rentals />} />
+          <Route path="/calendar" element={<BookingCalendar />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/book" element={<CustomerBooking />} />
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+
+        <Chatbot />
+        <Footer />
+      </div>
     </BrowserRouter>
   );
 }
