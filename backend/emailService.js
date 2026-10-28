@@ -1,21 +1,7 @@
 
-const nodemailer = require("nodemailer");
+const { Resend } = require("resend");
 
-const emailUser = process.env.EMAIL_USER?.trim();
-const emailPass = process.env.EMAIL_PASS?.trim();
-
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 465,
-  secure: true,
-  auth: {
-    user: emailUser,
-    pass: emailPass,
-  },
-  connectionTimeout: 20000,
-  greetingTimeout: 20000,
-  socketTimeout: 20000,
-});
+const resend = new Resend(process.env.RESEND_API_KEY?.trim());
 
 async function sendBookingConfirmation({
   customer,
@@ -24,19 +10,19 @@ async function sendBookingConfirmation({
   endDate,
   totalPrice,
 }) {
-  if (!emailUser || !emailPass) {
-    throw new Error("EMAIL_USER or EMAIL_PASS is missing.");
+  const apiKey = process.env.RESEND_API_KEY?.trim();
+
+  if (!apiKey) {
+    throw new Error("RESEND_API_KEY is missing in Render Environment.");
   }
 
   if (!customer?.email?.trim()) {
     throw new Error("Customer email address is missing.");
   }
 
-  const recipient = customer.email.trim();
-
-  const mailOptions = {
-    from: `"DriveEasy" <${emailUser}>`,
-    to: recipient,
+  const result = await resend.emails.send({
+    from: "DriveEasy <onboarding@resend.dev>",
+    to: [customer.email.trim()],
     subject: "DriveEasy Booking Confirmation",
     text: `Hello ${customer.fullName},
 
@@ -49,17 +35,16 @@ Total cost: PHP ${Number(totalPrice).toFixed(2)}
 Thank you for choosing DriveEasy!
 
 DriveEasy Vehicle Rental Team`,
-  };
-
-  const info = await transporter.sendMail(mailOptions);
-
-  console.log("Booking confirmation email sent:", {
-    messageId: info.messageId,
-    accepted: info.accepted,
-    rejected: info.rejected,
   });
 
-  return info;
+  if (result.error) {
+    console.error("Resend email error:", result.error);
+    throw new Error(result.error.message || "Resend failed to send email.");
+  }
+
+  console.log("Booking confirmation email accepted:", result.data?.id);
+
+  return result.data;
 }
 
 module.exports = { sendBookingConfirmation };
