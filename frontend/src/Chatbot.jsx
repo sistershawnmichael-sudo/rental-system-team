@@ -2,6 +2,10 @@
 import { useState, useEffect, useRef } from "react";
 import "./Chatbot.css";
 
+const API_BASE = (
+  import.meta.env.VITE_API_URL || "http://localhost:5000"
+).replace(/\/+$/, "");
+
 export default function Chatbot() {
   const [isOpen, setIsOpen] = useState(false);
   const [message, setMessage] = useState("");
@@ -12,10 +16,8 @@ export default function Chatbot() {
     },
   ]);
   const [loading, setLoading] = useState(false);
-
   const messagesEndRef = useRef(null);
 
-  // Automatically scroll to the latest message
   useEffect(() => {
     if (isOpen) {
       messagesEndRef.current?.scrollIntoView({
@@ -36,11 +38,11 @@ export default function Chatbot() {
     setLoading(true);
 
     try {
-      const API_URL = import.meta.env.VITE_API_URL;
-
-const response = await fetch(`${API_URL}/api/chat`, {
+      const response = await fetch(`${API_BASE}/api/chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({ message: text }),
       });
 
@@ -58,6 +60,8 @@ const response = await fetch(`${API_URL}/api/chat`, {
         },
       ]);
     } catch (error) {
+      console.error("Chatbot error:", error);
+
       setMessages((prev) => [
         ...prev,
         {
@@ -65,7 +69,6 @@ const response = await fetch(`${API_URL}/api/chat`, {
           text: "Sorry, I cannot connect right now. Please try again later.",
         },
       ]);
-      console.error("Chatbot error:", error);
     } finally {
       setLoading(false);
     }
