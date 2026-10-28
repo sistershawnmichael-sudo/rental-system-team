@@ -405,18 +405,29 @@ function Vehicles() {
   const [message, setMessage] = useState("Loading vehicles...");
   const [loading, setLoading] = useState(false);
 
-  async function loadVehicles() {
-    setLoading(true);
-    try {
-      const data = await request(API_URL);
-      setVehicles(data);
-      setMessage(`${data.length} vehicle(s) found.`);
-    } catch (error) {
-      setMessage(error.message);
-    } finally {
-      setLoading(false);
+
+async function loadVehicles() {
+  setLoading(true);
+
+  try {
+    const data = await request(API_URL);
+
+    console.log("Vehicles API response:", data);
+
+    if (!Array.isArray(data)) {
+      throw new Error("The vehicles API did not return a list.");
     }
+
+    setVehicles(data);
+    setMessage(`${data.length} vehicle(s) found.`);
+  } catch (error) {
+    console.error("Failed to load vehicles:", error);
+    setMessage(`Could not load vehicles: ${error.message}`);
+  } finally {
+    setLoading(false);
   }
+}
+
 
   useEffect(() => {
     loadVehicles();
@@ -814,9 +825,9 @@ const filteredVehicles = vehicles.filter((vehicle) => {
         ))}
       </div>
 
-      {vehicles.length === 0 && (
-        <p className="empty-message">No vehicles to display.</p>
-      )}
+{!loading && vehicles.length === 0 && (
+  <p className="empty-message">No vehicles to display.</p>
+)}
     </main>
   );
 }
