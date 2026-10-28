@@ -1,12 +1,20 @@
 
 const nodemailer = require("nodemailer");
 
+const emailUser = process.env.EMAIL_USER?.trim();
+const emailPass = process.env.EMAIL_PASS?.trim();
+
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  host: "smtp.gmail.com",
+  port: 465,
+  secure: true,
   auth: {
-    user: process.env.EMAIL_USER?.trim(),
-    pass: process.env.EMAIL_PASS?.trim(),
+    user: emailUser,
+    pass: emailPass,
   },
+  connectionTimeout: 20000,
+  greetingTimeout: 20000,
+  socketTimeout: 20000,
 });
 
 async function sendBookingConfirmation({
@@ -16,13 +24,8 @@ async function sendBookingConfirmation({
   endDate,
   totalPrice,
 }) {
-  const emailUser = process.env.EMAIL_USER?.trim();
-  const emailPass = process.env.EMAIL_PASS?.trim();
-
   if (!emailUser || !emailPass) {
-    throw new Error(
-      "Email credentials are missing. Check EMAIL_USER and EMAIL_PASS in .env."
-    );
+    throw new Error("EMAIL_USER or EMAIL_PASS is missing.");
   }
 
   if (!customer?.email?.trim()) {
@@ -50,12 +53,11 @@ DriveEasy Vehicle Rental Team`,
 
   const info = await transporter.sendMail(mailOptions);
 
-  console.log("Email sender:", emailUser);
-  console.log("Email recipient:", recipient);
-  console.log("Accepted recipients:", info.accepted);
-  console.log("Rejected recipients:", info.rejected);
-  console.log("Email message ID:", info.messageId);
-  console.log("Mail server response:", info.response);
+  console.log("Booking confirmation email sent:", {
+    messageId: info.messageId,
+    accepted: info.accepted,
+    rejected: info.rejected,
+  });
 
   return info;
 }
