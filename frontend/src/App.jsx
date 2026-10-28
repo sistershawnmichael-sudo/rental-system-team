@@ -22,10 +22,19 @@ import {
 } from "react-router-dom";
 import "./App.css";
 
-const API_URL = "http://localhost:5000/api/vehicles";
-const CUSTOMER_API = "http://localhost:5000/api/customers";
 
-const AUTH_API = "http://localhost:5000/api/auth";
+const API_BASE = (
+  import.meta.env.VITE_API_URL ||
+  "https://rental-system-team.onrender.com"
+).replace(/\/+$/, "");
+
+const API_URL = `${API_BASE}/api/vehicles`;
+const CUSTOMER_API = `${API_BASE}/api/customers`;
+const AUTH_API = `${API_BASE}/api/auth`;
+const BOOKINGS_API = `${API_BASE}/api/bookings`;
+const ADMIN_API = `${API_BASE}/api/admin`;
+
+
 
 function Login() {
   const [email, setEmail] = useState("");
@@ -814,10 +823,8 @@ const filteredVehicles = vehicles.filter((vehicle) => {
 // CUSTOMER BOOKING PAGE
 
 function CustomerBooking() {
-  const BOOKINGS_API = "http://localhost:5000/api/bookings";
-  const AVAILABILITY_API =
-    "http://localhost:5000/api/bookings/availability";
-
+  
+ const AVAILABILITY_API = `${BOOKINGS_API}/availability`;
   const emptyForm = {
     fullName: "",
     phone: "",
@@ -1381,7 +1388,7 @@ function Customers() {
  // RENTALS / BOOKINGS PAGE
 
 function Rentals() {
-  const BOOKINGS_API = "http://localhost:5000/api/bookings";
+
   const emptyForm = {
     customerId: "",
     vehicleId: "",
@@ -1739,7 +1746,7 @@ if (!selectedCustomer) {
  // BOOKING CALENDAR PAGE
 
 function BookingCalendar() {
-  const BOOKINGS_API = "http://localhost:5000/api/bookings";
+
 
   const [bookings, setBookings] = useState([]);
   const [currentMonth, setCurrentMonth] = useState(() => {
@@ -2130,8 +2137,8 @@ function AdminDashboard() {
       setError("");
 
       const token = sessionStorage.getItem("driveEasyToken");
-      const response = await fetch(
-        "http://localhost:5000/api/admin/dashboard",
+     const response = await fetch(
+  `${ADMIN_API}/dashboard`,
         {
           headers: {
             Authorization: `Bearer ${token}`
