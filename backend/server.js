@@ -676,19 +676,17 @@ app.get("/api/bookings/availability", async (req, res) => {
       [Number(vehicleId)]
     );
 
-if (vehicleResult.rows[0].status !== "Available") {
-  await client.query("ROLLBACK");
-  return res.status(409).json({
+if (
+  !vehicleResult.rows.length ||
+  vehicleResult.rows[0].status !== "Available"
+) {
+  return res.json({
+    available: false,
     message: "This vehicle is currently unavailable."
   });
 }
 
-    if (vehicleResult.rows[0].status !== "Available") {
-      return res.json({
-        available: false,
-        message: "This vehicle is currently unavailable."
-      });
-    }
+
 
     const result = await pool.query(
       `SELECT EXISTS (
@@ -719,9 +717,6 @@ if (vehicleResult.rows[0].status !== "Available") {
   }
 });
 
-app.get("/api/bookings/availability", async (req, res) => {
-  // Your existing availability code stays here.
-});
 
 // PASTE THE NEW DASHBOARD ROUTE HERE
 app.get("/api/admin/dashboard", authenticateToken, allowRoles("Admin"), async (req, res) => {
@@ -924,28 +919,20 @@ try {
     totalPrice,
   });
 
-  if (!mailResult || !Array.isArray(mailResult.accepted)) {
-    throw new Error(
-      "Email service did not return recipient acceptance details. Check emailService.js."
-    );
-  }
 
-  const accepted = mailResult.accepted.some(
-    (address) =>
-      String(address).toLowerCase() === recipient.toLowerCase()
+if (!mailResult?.id) {
+  throw new Error(
+    "Resend did not return an email ID."
   );
+}
 
-  if (!accepted) {
-    throw new Error(
-      `The mail server did not accept the recipient: ${recipient}.`
-    );
-  }
+emailSent = true;
 
-  emailSent = true;
+console.log("Booking confirmation email accepted by Resend:", {
+  emailId: mailResult.id,
+  recipient,
+});
 
-  console.log("Email accepted by mail server:", recipient);
-  console.log("Email message ID:", mailResult.messageId);
-  console.log("Mail server response:", mailResult.response);
 
 } catch (emailError) {
   console.error(
